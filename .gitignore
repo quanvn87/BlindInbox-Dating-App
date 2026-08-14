@@ -1,0 +1,5 @@
+.superpowers/
+.visual-companion-*.log
+.env
+.env.*
+!.env.example
