@@ -11,10 +11,10 @@ MVP phục vụ tối đa khoảng 10.000 tài khoản và 1.000 người dùng 
 MVP bao gồm:
 
 - Đăng nhập bằng số điện thoại và OTP; email khôi phục là tùy chọn.
-- Giới hạn toàn bộ sản phẩm cho người từ 18 tuổi.
+- Giới hạn toàn bộ sản phẩm cho người từ 18 tuổi, kể cả khi chỉ tìm bạn hoặc người nói chuyện.
 - Xác minh danh tính và đối chiếu ảnh/liveness trước khi tìm kiếm.
 - Tạo hồ sơ, ảnh đại diện, ảnh bổ sung, mô tả và dữ liệu cá nhân.
-- Chọn tiêu chí giới tính, mục tiêu quan hệ, độ tuổi, khu vực, bán kính và sở thích.
+- Khai giới tính bản thân; chọn một hoặc nhiều giới tính muốn kết nối, mục đích kết nối, độ tuổi, khu vực, bán kính và sở thích.
 - Đề xuất có giới hạn, đồng thuận hai chiều và một kết nối hoạt động tại một thời điểm.
 - Chat realtime với hạn mức và quyền truy cập tăng dần theo ba giai đoạn.
 - Push notification, chặn, báo cáo và trang quản trị kiểm duyệt tối thiểu.
@@ -104,8 +104,9 @@ Hồ sơ gồm:
 
 - Tên hiển thị.
 - Ngày sinh; chỉ tuổi hoặc khoảng tuổi được hiển thị tùy giai đoạn.
-- Giới tính và giới tính muốn hẹn hò.
-- Mục tiêu quan hệ.
+- Giới tính bản thân và nhãn tự mô tả nếu áp dụng.
+- Danh sách giới tính muốn kết nối.
+- Một hoặc nhiều mục đích kết nối.
 - Chiều cao.
 - Quê quán ở cấp tỉnh/thành phố.
 - Khu vực đang sinh sống, có thể khai đến phường/xã.
@@ -117,6 +118,25 @@ Hồ sơ gồm:
 - Một avatar và các ảnh hồ sơ bổ sung.
 
 Prompt, tên bài nhạc và nội dung tự do không được chứa thông tin liên hệ, URL hoặc thông tin thanh toán.
+
+### 4.3 Giới tính và mục đích kết nối
+
+Giới tính bản thân và giới tính muốn kết nối là hai dữ liệu độc lập:
+
+- `gender_identity`: một trong các nhóm chuẩn `MAN`, `WOMAN`, `NON_BINARY`, `SELF_DESCRIBED`; nhóm tự mô tả có thêm nhãn hiển thị đã kiểm duyệt.
+- `interested_in_genders`: tập gồm một hoặc nhiều nhóm giới tính. Lựa chọn “Tất cả” được lưu thành toàn bộ nhóm chuẩn đang hoạt động, không phải một giới tính riêng.
+
+KYC chỉ xác minh tuổi và danh tính. Hệ thống không suy đoán hoặc ghi đè giới tính từ CCCD, ảnh hay khuôn mặt.
+
+Các mục đích kết nối ban đầu:
+
+- `CASUAL_CONVERSATION`: tìm người nói chuyện.
+- `FRIENDSHIP`: tìm bạn bè.
+- `LONG_TERM_DATING`: hẹn hò lâu dài.
+- `SHORT_TERM_DATING`: hẹn hò ngắn hạn.
+- `OPEN_TO_EXPLORE`: chưa xác định, muốn tìm hiểu.
+
+Người dùng có thể chọn nhiều mục đích. Toàn bộ lựa chọn đều chỉ dành cho người từ 18 tuổi.
 
 ## 5. Khu vực và tiêu chí ghép đôi
 
@@ -150,13 +170,13 @@ Khoảng cách phải nằm trong bán kính của cả hai người. Trên th�
 
 1. Cả hai đủ 18 tuổi, đã xác minh và có trạng thái hợp lệ.
 2. Cả hai chưa có kết nối hoặc đề xuất độc quyền đang hoạt động.
-3. Giới tính mong muốn tương thích hai chiều.
-4. Mục tiêu quan hệ tương thích hai chiều.
+3. Giới tính tương thích hai chiều: `A.gender_identity` thuộc `B.interested_in_genders` và `B.gender_identity` thuộc `A.interested_in_genders`.
+4. Mục đích kết nối tương thích hai chiều: hai tập mục đích có ít nhất một phần tử chung.
 5. Nếu cả hai bật GPS, khoảng cách thuộc bán kính của cả hai; nếu không, khu vực hành chính của mỗi người phải tương thích với tiêu chí người kia.
 6. Khoảng tuổi mong muốn tương thích hai chiều.
 7. Hai tài khoản chưa từng chặn nhau và không thuộc trường hợp an toàn bị loại.
 
-Giới tính là tiêu chí nghiệp vụ được kiểm tra ưu tiên như yêu cầu sản phẩm, nhưng không thể bỏ qua các điều kiện bắt buộc còn lại.
+Giới tính là tiêu chí nghiệp vụ được kiểm tra ưu tiên như yêu cầu sản phẩm, nhưng không thể bỏ qua các điều kiện bắt buộc còn lại. Thuật toán không ưu tiên cặp nam–nữ hơn các tổ hợp khác. Ví dụ, hai hồ sơ đều là nam và đều chọn muốn kết nối với nam sẽ vượt qua điều kiện giới tính; họ có thể kết nối để nói chuyện, làm bạn hoặc hẹn hò nếu mục đích của hai bên có giao nhau.
 
 ### 5.4 Xếp hạng
 
@@ -190,9 +210,10 @@ Trước khi kết nối, mỗi người nhìn thấy:
 - Huy hiệu đã xác minh 18+.
 - Huy hiệu ảnh hồ sơ đã đối chiếu.
 - Khoảng tuổi.
+- Giới tính tự khai.
 - Tỉnh/thành phố, không hiện quận/phường.
 - Dải khoảng cách gần đúng tại thời điểm tạo đề xuất nếu cả hai dùng GPS.
-- Mục tiêu quan hệ.
+- Mục đích kết nối chung của hai người.
 - Danh sách sở thích chọn lọc.
 - Một bài nhạc yêu thích dưới dạng metadata, không tự phát nhạc.
 - Một hoặc hai câu trả lời prompt.
@@ -261,7 +282,7 @@ Một câu trả lời không hoặc thiếu bất kỳ câu trả lời nào kh
 
 Khi cả hai đồng ý:
 
-- Hiển thị tên, tuổi, chiều cao, quê quán cấp tỉnh/thành phố, bio, mục tiêu quan hệ và các ảnh hồ sơ còn lại.
+- Hiển thị tên, tuổi, chiều cao, quê quán cấp tỉnh/thành phố, bio, toàn bộ mục đích kết nối đã chọn và các ảnh hồ sơ còn lại.
 - Không hiển thị số điện thoại, email, CCCD, địa chỉ chính xác, phường/xã đang sống hoặc vị trí thời gian thực.
 - Cho phép media hợp lệ sau khi quét.
 - Mỗi người được gửi tối đa 50 tin nhắn trong từng cửa sổ 24 giờ tính từ thời điểm nâng cấp.
