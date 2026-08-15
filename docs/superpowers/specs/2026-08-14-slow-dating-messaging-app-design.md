@@ -14,7 +14,7 @@ MVP bao gồm:
 - Giới hạn toàn bộ sản phẩm cho người từ 18 tuổi.
 - Xác minh danh tính và đối chiếu ảnh/liveness trước khi tìm kiếm.
 - Tạo hồ sơ, ảnh đại diện, ảnh bổ sung, mô tả và dữ liệu cá nhân.
-- Chọn tiêu chí giới tính, mục tiêu quan hệ, độ tuổi, khu vực và sở thích.
+- Chọn tiêu chí giới tính, mục tiêu quan hệ, độ tuổi, khu vực, bán kính và sở thích.
 - Đề xuất có giới hạn, đồng thuận hai chiều và một kết nối hoạt động tại một thời điểm.
 - Chat realtime với hạn mức và quyền truy cập tăng dần theo ba giai đoạn.
 - Push notification, chặn, báo cáo và trang quản trị kiểm duyệt tối thiểu.
@@ -24,7 +24,7 @@ Ngoài phạm vi MVP:
 
 - Người dùng 16–17 tuổi hoặc một chế độ dành cho trẻ vị thành niên.
 - Quẹt hồ sơ vô hạn, gọi thoại/video, livestream, thanh toán và quảng cáo.
-- GPS thời gian thực hoặc tìm kiếm theo bán kính.
+- Theo dõi GPS nền, hiển thị bản đồ hoặc chia sẻ vị trí thời gian thực.
 - Phát nhạc trực tiếp hoặc tích hợp đầy đủ Spotify/Apple Music.
 - Tối ưu giao diện riêng cho iOS, web và Windows; MVP chỉ yêu cầu giữ khả năng build kỹ thuật sau Android.
 
@@ -109,6 +109,7 @@ Hồ sơ gồm:
 - Chiều cao.
 - Quê quán ở cấp tỉnh/thành phố.
 - Khu vực đang sinh sống, có thể khai đến phường/xã.
+- Vị trí GPS tùy chọn chỉ dùng làm snapshot khi tìm kiếm.
 - Mô tả bản thân.
 - Sở thích theo danh mục chuẩn hóa.
 - Một bài nhạc yêu thích gồm tên bài và nghệ sĩ.
@@ -129,7 +130,21 @@ Mỗi node có mã ổn định, loại và `parent_id`. Nếu người tìm ch�
 
 Quê quán là trường hồ sơ; khu vực đang sinh sống là trường dùng để ghép đôi. Vị trí chi tiết không hiển thị cho đối phương.
 
-### 5.2 Điều kiện cứng
+### 5.2 GPS và bán kính tùy chọn
+
+- Ứng dụng chỉ yêu cầu quyền vị trí khi người dùng chủ động bật tìm kiếm theo khoảng cách.
+- Chỉ dùng quyền khi ứng dụng đang được sử dụng; MVP không xin quyền vị trí nền.
+- Người dùng có thể cấp vị trí chính xác hoặc gần đúng theo khả năng của hệ điều hành.
+- Người dùng chọn bán kính `5 / 10 / 25 / 50 / 100 km`.
+- Snapshot vị trí hết hạn sau 24 giờ; muốn tiếp tục tìm theo khoảng cách phải cập nhật lại.
+- Backend lưu geohash dùng lọc sơ bộ và tọa độ snapshot được bảo vệ dùng tính khoảng cách cho tập ứng viên đã rút gọn. Tọa độ không được đưa vào API thẻ hoặc log.
+- Tọa độ snapshot bị xóa khi search session kết thúc, đề xuất được giải quyết hoặc hết hạn; proposal chỉ giữ dải khoảng cách đã tính.
+- Nếu người dùng từ chối GPS, hệ thống tiếp tục dùng cây tỉnh/quận/phường.
+- Không hiển thị tọa độ, bản đồ, hướng đi hoặc vị trí hành chính chi tiết của đối phương.
+
+Khoảng cách phải nằm trong bán kính của cả hai người. Trên thẻ tương thích chỉ hiển thị một dải: dưới 2 km, 2–5 km, 5–10 km, 10–25 km, 25–50 km hoặc trên 50 km. Dải này chỉ xuất hiện khi cân nhắc đề xuất và không còn truy cập được sau khi kết nối được tạo.
+
+### 5.3 Điều kiện cứng
 
 Ứng viên phải vượt qua toàn bộ điều kiện sau theo thứ tự:
 
@@ -137,13 +152,13 @@ Quê quán là trường hồ sơ; khu vực đang sinh sống là trường dù
 2. Cả hai chưa có kết nối hoặc đề xuất độc quyền đang hoạt động.
 3. Giới tính mong muốn tương thích hai chiều.
 4. Mục tiêu quan hệ tương thích hai chiều.
-5. Khu vực tìm kiếm của mỗi người bao phủ khu vực sinh sống của người kia.
+5. Nếu cả hai bật GPS, khoảng cách thuộc bán kính của cả hai; nếu không, khu vực hành chính của mỗi người phải tương thích với tiêu chí người kia.
 6. Khoảng tuổi mong muốn tương thích hai chiều.
 7. Hai tài khoản chưa từng chặn nhau và không thuộc trường hợp an toàn bị loại.
 
 Giới tính là tiêu chí nghiệp vụ được kiểm tra ưu tiên như yêu cầu sản phẩm, nhưng không thể bỏ qua các điều kiện bắt buộc còn lại.
 
-### 5.3 Xếp hạng
+### 5.4 Xếp hạng
 
 Trong tập ứng viên hợp lệ, hệ thống tính điểm dựa trên:
 
@@ -176,17 +191,19 @@ Trước khi kết nối, mỗi người nhìn thấy:
 - Huy hiệu ảnh hồ sơ đã đối chiếu.
 - Khoảng tuổi.
 - Tỉnh/thành phố, không hiện quận/phường.
+- Dải khoảng cách gần đúng tại thời điểm tạo đề xuất nếu cả hai dùng GPS.
 - Mục tiêu quan hệ.
 - Danh sách sở thích chọn lọc.
 - Một bài nhạc yêu thích dưới dạng metadata, không tự phát nhạc.
 - Một hoặc hai câu trả lời prompt.
 - Các lý do cụ thể hệ thống đưa ra đề xuất.
 
-Tên, avatar, ảnh khác, vị trí nhỏ hơn cấp tỉnh, chiều cao, quê quán, bio đầy đủ và thông tin liên hệ vẫn bị ẩn.
+Tên, avatar, ảnh khác, tọa độ, vị trí nhỏ hơn cấp tỉnh, chiều cao, quê quán, bio đầy đủ và thông tin liên hệ vẫn bị ẩn. Dải khoảng cách chỉ phục vụ quyết định trên thẻ; sau khi kết nối được tạo, nó biến mất khỏi UI và API chat.
 
 ### 6.3 Quyết định
 
 - Mỗi người có thể chọn “Bắt đầu tìm hiểu” hoặc “Bỏ qua”.
+- UI hỗ trợ cả nút bấm và cử chỉ: quẹt phải tương đương “Bắt đầu tìm hiểu”, quẹt trái tương đương “Bỏ qua”.
 - “Bắt đầu tìm hiểu” yêu cầu một lời mở đầu tối đa 280 ký tự dựa trên sở thích, bài nhạc hoặc prompt.
 - Lời mở đầu được kiểm duyệt và chỉ chuyển khi cả hai đồng ý.
 - Chỉ khi cả hai đồng ý mới tạo kết nối độc quyền và rời hàng chờ.
