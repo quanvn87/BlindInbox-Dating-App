@@ -225,7 +225,7 @@ Tên, avatar, ảnh khác, tọa độ, vị trí nhỏ hơn cấp tỉnh, chi�
 
 - Mỗi người có thể chọn “Bắt đầu tìm hiểu” hoặc “Bỏ qua”.
 - UI hỗ trợ cả nút bấm và cử chỉ: quẹt phải tương đương “Bắt đầu tìm hiểu”, quẹt trái tương đương “Bỏ qua”.
-- “Bắt đầu tìm hiểu” yêu cầu một lời mở đầu tối đa 280 ký tự dựa trên sở thích, bài nhạc hoặc prompt.
+- “Bắt đầu tìm hiểu” yêu cầu một lời mở đầu dài từ 1 đến 280 ký tự có nội dung, không tính khoảng trắng, dựa trên sở thích, bài nhạc hoặc prompt. UI có thể đưa ra gợi ý để chọn nhanh nhưng không tự gửi thay người dùng.
 - Lời mở đầu được kiểm duyệt và chỉ chuyển khi cả hai đồng ý.
 - Chỉ khi cả hai đồng ý mới tạo kết nối độc quyền và rời hàng chờ.
 - Tối đa ba đề xuất mỗi người trong 24 giờ; chỉ có một đề xuất chờ tại một thời điểm.
