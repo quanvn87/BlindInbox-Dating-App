@@ -1,5 +1,7 @@
 import type { AuthUser, OtpChallenge, RefreshSession } from './auth.types';
 
+export const AUTH_REPOSITORY = 'AUTH_REPOSITORY';
+
 export type ConsumeOtpChallengeResult =
   | 'CONSUMED'
   | 'NOT_FOUND'
