@@ -185,9 +185,11 @@
         "additionalProperties": false,
         "properties": {
           "bio": {
+            "maxLength": 500,
             "type": "string"
           },
           "birthDate": {
+            "description": "UTC calendar date (YYYY-MM-DD); the server requires age >=18 using the UTC calendar date.",
             "format": "date",
             "type": "string"
           },
@@ -202,16 +204,23 @@
               ],
               "type": "string"
             },
-            "type": "array"
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
           },
           "displayName": {
+            "description": "Must contain at least 2 nonblank characters after trimming; maximum 50 characters.",
+            "maxLength": 50,
+            "minLength": 2,
             "type": "string"
           },
           "favoriteSongArtist": {
+            "description": "Both favoriteSongTitle and favoriteSongArtist must be null, or both must be present and nonblank.",
             "nullable": true,
             "type": "string"
           },
           "favoriteSongTitle": {
+            "description": "Both favoriteSongTitle and favoriteSongArtist must be null, or both must be present and nonblank.",
             "nullable": true,
             "type": "string"
           },
@@ -225,17 +234,26 @@
             "type": "string"
           },
           "genderLabel": {
+            "description": "When genderIdentity is SELF_DESCRIBED, this is required and must be nonblank; otherwise it must be null.",
+            "maxLength": 50,
+            "minLength": 2,
             "nullable": true,
             "type": "string"
           },
           "heightCm": {
+            "maximum": 250,
+            "minimum": 100,
             "nullable": true,
-            "type": "number"
+            "type": "integer"
           },
           "homeLocationCode": {
+            "description": "Must be a nonblank active catalog location code.",
+            "minLength": 1,
             "type": "string"
           },
           "hometownLocationCode": {
+            "description": "When present, must be a nonblank active catalog location code.",
+            "minLength": 1,
             "nullable": true,
             "type": "string"
           },
@@ -249,9 +267,12 @@
               ],
               "type": "string"
             },
-            "type": "array"
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
           },
           "promptAnswers": {
+            "description": "promptCode values must be unique; prompt codes and answers must be nonblank.",
             "items": {
               "$ref": "#/components/schemas/ProfilePromptAnswer"
             },
@@ -299,9 +320,14 @@
         "additionalProperties": false,
         "properties": {
           "answer": {
+            "description": "Must be nonblank after trimming.",
+            "maxLength": 280,
+            "minLength": 1,
             "type": "string"
           },
           "promptCode": {
+            "description": "Must be nonblank; promptCode values must be unique within promptAnswers.",
+            "minLength": 1,
             "type": "string"
           }
         },

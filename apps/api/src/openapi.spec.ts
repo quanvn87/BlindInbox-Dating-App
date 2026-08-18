@@ -183,9 +183,113 @@ describe('OpenAPI contract', () => {
           ],
         },
       },
-      heightCm: { type: 'number', nullable: true },
+      heightCm: { type: 'integer', nullable: true },
       promptAnswers: { type: 'array' },
     });
+  });
+
+  it('publishes every representable ProfileInput runtime constraint', () => {
+    const profile = schema(document, 'ProfileInput');
+    const properties = profile.properties;
+
+    expect(properties?.displayName).toMatchObject({
+      type: 'string',
+      minLength: 2,
+      maxLength: 50,
+    });
+    expect(properties?.displayName?.description).toContain('nonblank');
+    expect(properties?.birthDate).toMatchObject({
+      type: 'string',
+      format: 'date',
+    });
+    expect(properties?.birthDate?.description).toMatch(/18.*UTC/);
+    expect(properties?.genderLabel).toMatchObject({
+      type: 'string',
+      nullable: true,
+      minLength: 2,
+      maxLength: 50,
+    });
+    expect(properties?.genderLabel?.description).toMatch(
+      /SELF_DESCRIBED.*required.*null/i,
+    );
+    expect(properties?.interestedInGenders).toMatchObject({
+      type: 'array',
+      minItems: 1,
+      uniqueItems: true,
+    });
+    expect(properties?.connectionIntents).toMatchObject({
+      type: 'array',
+      minItems: 1,
+      uniqueItems: true,
+    });
+    expect(properties?.heightCm).toMatchObject({
+      type: 'integer',
+      nullable: true,
+      minimum: 100,
+      maximum: 250,
+    });
+    expect(properties?.bio).toMatchObject({
+      type: 'string',
+      maxLength: 500,
+    });
+
+    const promptAnswer = schema(document, 'ProfilePromptAnswer');
+    expect(promptAnswer.additionalProperties).toBe(false);
+    expect(promptAnswer.properties?.answer).toMatchObject({
+      type: 'string',
+      minLength: 1,
+      maxLength: 280,
+    });
+    expect(promptAnswer.properties?.answer?.description).toContain('nonblank');
+    expect(promptAnswer.properties?.promptCode).toMatchObject({
+      type: 'string',
+      minLength: 1,
+    });
+    expect(promptAnswer.properties?.promptCode?.description).toMatch(
+      /nonblank.*unique/i,
+    );
+
+    expect(properties?.homeLocationCode).toMatchObject({
+      type: 'string',
+      minLength: 1,
+    });
+    expect(properties?.homeLocationCode?.description).toMatch(
+      /nonblank.*active.*location/i,
+    );
+    expect(properties?.hometownLocationCode).toMatchObject({
+      type: 'string',
+      nullable: true,
+      minLength: 1,
+    });
+    expect(properties?.hometownLocationCode?.description).toMatch(
+      /nonblank.*active.*location/i,
+    );
+
+    expect(properties?.favoriteSongTitle).toMatchObject({
+      type: 'string',
+      nullable: true,
+    });
+    expect(properties?.favoriteSongTitle?.description).toMatch(
+      /both.*null.*both.*present/i,
+    );
+    expect(properties?.favoriteSongArtist).toMatchObject({
+      type: 'string',
+      nullable: true,
+    });
+    expect(properties?.favoriteSongArtist?.description).toMatch(
+      /both.*null.*both.*present/i,
+    );
+    expect(properties?.favoriteSongTitle).not.toHaveProperty('minLength');
+    expect(properties?.favoriteSongTitle).not.toHaveProperty('maxLength');
+    expect(properties?.favoriteSongArtist).not.toHaveProperty('minLength');
+    expect(properties?.favoriteSongArtist).not.toHaveProperty('maxLength');
+
+    expect(properties?.promptAnswers).toMatchObject({
+      type: 'array',
+    });
+    expect(properties?.promptAnswers?.description).toMatch(
+      /promptCode.*unique/i,
+    );
   });
 
   it('serializes deterministically with sorted keys', () => {
