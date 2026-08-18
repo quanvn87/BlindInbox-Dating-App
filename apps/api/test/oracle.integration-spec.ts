@@ -40,7 +40,205 @@ describe('Oracle integration', () => {
       ),
     );
 
-    expect(result.rows).toEqual([{ VERSION: '001_auth' }]);
+    expect(result.rows).toEqual([
+      { VERSION: '001_auth' },
+      { VERSION: '002_profile_catalog' },
+      { VERSION: '003_profile' },
+    ]);
+  });
+
+  it('seeds the canonical active profile catalogs and location ancestry', async () => {
+    await migrationRunner.run();
+
+    const catalogs = await oracleService.withConnection(async (connection) => {
+      const genders = await connection.execute<{ CODE: string }>(
+        'SELECT code FROM gender_catalog WHERE is_active = 1 ORDER BY sort_order',
+        [],
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
+      const intents = await connection.execute<{ CODE: string }>(
+        'SELECT code FROM connection_intent_catalog WHERE is_active = 1 ORDER BY sort_order',
+        [],
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
+      const locations = await connection.execute<{
+        CODE: string;
+        DISPLAY_NAME: string;
+        LOCATION_LEVEL: string;
+        PARENT_CODE: string | null;
+      }>(
+        `SELECT code, display_name, location_level, parent_code
+         FROM location_nodes
+         ORDER BY code`,
+        [],
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
+      return { genders, intents, locations };
+    });
+
+    expect(catalogs.genders.rows).toEqual([
+      { CODE: 'MAN' },
+      { CODE: 'WOMAN' },
+      { CODE: 'NON_BINARY' },
+      { CODE: 'SELF_DESCRIBED' },
+    ]);
+    expect(catalogs.intents.rows).toEqual([
+      { CODE: 'CASUAL_CONVERSATION' },
+      { CODE: 'FRIENDSHIP' },
+      { CODE: 'LONG_TERM_DATING' },
+      { CODE: 'SHORT_TERM_DATING' },
+      { CODE: 'OPEN_TO_EXPLORE' },
+    ]);
+    expect(catalogs.locations.rows).toEqual([
+      {
+        CODE: 'VN-HCM',
+        DISPLAY_NAME: 'Thành phố Hồ Chí Minh',
+        LOCATION_LEVEL: 'PROVINCE',
+        PARENT_CODE: null,
+      },
+      {
+        CODE: 'VN-HCM-Q1',
+        DISPLAY_NAME: 'Quận 1',
+        LOCATION_LEVEL: 'DISTRICT',
+        PARENT_CODE: 'VN-HCM',
+      },
+      {
+        CODE: 'VN-HCM-Q1-BT',
+        DISPLAY_NAME: 'Phường Bến Thành',
+        LOCATION_LEVEL: 'WARD',
+        PARENT_CODE: 'VN-HCM-Q1',
+      },
+      {
+        CODE: 'VN-HN',
+        DISPLAY_NAME: 'Thành phố Hà Nội',
+        LOCATION_LEVEL: 'PROVINCE',
+        PARENT_CODE: null,
+      },
+    ]);
+  });
+
+  it('creates profile relations with primary and foreign-key constraints', async () => {
+    await migrationRunner.run();
+
+    const schema = await oracleService.withConnection(async (connection) => {
+      const tables = await connection.execute<{ TABLE_NAME: string }>(
+        `SELECT table_name
+         FROM user_tables
+         WHERE table_name IN (
+           'PROFILES',
+           'PROFILE_INTERESTED_GENDERS',
+           'PROFILE_CONNECTION_INTENTS',
+           'PROFILE_PROMPT_ANSWERS'
+         )
+         ORDER BY table_name`,
+        [],
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
+      const constraintCounts = await connection.execute<{
+        TABLE_NAME: string;
+        CONSTRAINT_TYPE: string;
+        CONSTRAINT_COUNT: number;
+      }>(
+        `SELECT table_name, constraint_type, COUNT(*) AS constraint_count
+         FROM user_constraints
+         WHERE table_name IN (
+           'PROFILES',
+           'PROFILE_INTERESTED_GENDERS',
+           'PROFILE_CONNECTION_INTENTS',
+           'PROFILE_PROMPT_ANSWERS'
+         )
+         AND constraint_type IN ('P', 'R')
+         GROUP BY table_name, constraint_type
+         ORDER BY table_name, constraint_type`,
+        [],
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
+      const compositeKeys = await connection.execute<{
+        TABLE_NAME: string;
+        KEY_COLUMNS: string;
+      }>(
+        `SELECT constraints.table_name,
+                LISTAGG(columns.column_name, ',')
+                  WITHIN GROUP (ORDER BY columns.position) AS key_columns
+         FROM user_constraints constraints
+         JOIN user_cons_columns columns
+           ON columns.constraint_name = constraints.constraint_name
+         WHERE constraints.table_name IN (
+           'PROFILE_INTERESTED_GENDERS',
+           'PROFILE_CONNECTION_INTENTS',
+           'PROFILE_PROMPT_ANSWERS'
+         )
+         AND constraints.constraint_type = 'P'
+         GROUP BY constraints.table_name
+         ORDER BY constraints.table_name`,
+        [],
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
+      return { tables, constraintCounts, compositeKeys };
+    });
+
+    expect(schema.tables.rows).toEqual([
+      { TABLE_NAME: 'PROFILES' },
+      { TABLE_NAME: 'PROFILE_CONNECTION_INTENTS' },
+      { TABLE_NAME: 'PROFILE_INTERESTED_GENDERS' },
+      { TABLE_NAME: 'PROFILE_PROMPT_ANSWERS' },
+    ]);
+    expect(schema.constraintCounts.rows).toEqual([
+      {
+        TABLE_NAME: 'PROFILES',
+        CONSTRAINT_TYPE: 'P',
+        CONSTRAINT_COUNT: 1,
+      },
+      {
+        TABLE_NAME: 'PROFILES',
+        CONSTRAINT_TYPE: 'R',
+        CONSTRAINT_COUNT: 4,
+      },
+      {
+        TABLE_NAME: 'PROFILE_CONNECTION_INTENTS',
+        CONSTRAINT_TYPE: 'P',
+        CONSTRAINT_COUNT: 1,
+      },
+      {
+        TABLE_NAME: 'PROFILE_CONNECTION_INTENTS',
+        CONSTRAINT_TYPE: 'R',
+        CONSTRAINT_COUNT: 2,
+      },
+      {
+        TABLE_NAME: 'PROFILE_INTERESTED_GENDERS',
+        CONSTRAINT_TYPE: 'P',
+        CONSTRAINT_COUNT: 1,
+      },
+      {
+        TABLE_NAME: 'PROFILE_INTERESTED_GENDERS',
+        CONSTRAINT_TYPE: 'R',
+        CONSTRAINT_COUNT: 2,
+      },
+      {
+        TABLE_NAME: 'PROFILE_PROMPT_ANSWERS',
+        CONSTRAINT_TYPE: 'P',
+        CONSTRAINT_COUNT: 1,
+      },
+      {
+        TABLE_NAME: 'PROFILE_PROMPT_ANSWERS',
+        CONSTRAINT_TYPE: 'R',
+        CONSTRAINT_COUNT: 2,
+      },
+    ]);
+    expect(schema.compositeKeys.rows).toEqual([
+      {
+        TABLE_NAME: 'PROFILE_CONNECTION_INTENTS',
+        KEY_COLUMNS: 'USER_ID,INTENT_CODE',
+      },
+      {
+        TABLE_NAME: 'PROFILE_INTERESTED_GENDERS',
+        KEY_COLUMNS: 'USER_ID,GENDER_CODE',
+      },
+      {
+        TABLE_NAME: 'PROFILE_PROMPT_ANSWERS',
+        KEY_COLUMNS: 'USER_ID,PROMPT_CODE',
+      },
+    ]);
   });
 
   it('reports ready when Oracle is reachable', async () => {

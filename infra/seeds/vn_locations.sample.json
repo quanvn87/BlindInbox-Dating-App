@@ -1,0 +1,6 @@
+[
+  {"code":"VN-HCM","name":"Thành phố Hồ Chí Minh","level":"PROVINCE","parentCode":null},
+  {"code":"VN-HCM-Q1","name":"Quận 1","level":"DISTRICT","parentCode":"VN-HCM"},
+  {"code":"VN-HCM-Q1-BT","name":"Phường Bến Thành","level":"WARD","parentCode":"VN-HCM-Q1"},
+  {"code":"VN-HN","name":"Thành phố Hà Nội","level":"PROVINCE","parentCode":null}
+]
