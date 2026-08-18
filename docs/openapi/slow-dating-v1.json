@@ -195,6 +195,7 @@
           },
           "connectionIntents": {
             "items": {
+              "description": "Must be a currently active connection intent code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
               "enum": [
                 "CASUAL_CONVERSATION",
                 "FRIENDSHIP",
@@ -225,6 +226,7 @@
             "type": "string"
           },
           "genderIdentity": {
+            "description": "Must be a currently active gender code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
             "enum": [
               "MAN",
               "WOMAN",
@@ -259,6 +261,7 @@
           },
           "interestedInGenders": {
             "items": {
+              "description": "Must be a currently active gender code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
               "enum": [
                 "MAN",
                 "WOMAN",
@@ -326,7 +329,7 @@
             "type": "string"
           },
           "promptCode": {
-            "description": "Must be nonblank; promptCode values must be unique within promptAnswers.",
+            "description": "Must be nonblank and unique within promptAnswers. It must be a currently active prompt code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
             "minLength": 1,
             "type": "string"
           }

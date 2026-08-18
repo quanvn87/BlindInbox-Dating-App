@@ -39,7 +39,7 @@ class ProfilePromptAnswer {
   @ApiProperty({
     minLength: 1,
     description:
-      'Must be nonblank; promptCode values must be unique within promptAnswers.',
+      'Must be nonblank and unique within promptAnswers. It must be a currently active prompt code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.',
   })
   promptCode!: string;
 
@@ -67,7 +67,11 @@ export class ProfileInput implements ProfileInputContract {
   })
   birthDate!: string;
 
-  @ApiProperty({ enum: GENDER_CODES })
+  @ApiProperty({
+    enum: GENDER_CODES,
+    description:
+      'Must be a currently active gender code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.',
+  })
   genderIdentity!: GenderCode;
 
   @ApiProperty({
@@ -81,16 +85,26 @@ export class ProfileInput implements ProfileInputContract {
   genderLabel!: string | null;
 
   @ApiProperty({
-    enum: GENDER_CODES,
-    isArray: true,
+    type: 'array',
+    items: {
+      type: 'string',
+      enum: [...GENDER_CODES],
+      description:
+        'Must be a currently active gender code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.',
+    },
     minItems: 1,
     uniqueItems: true,
   })
   interestedInGenders!: GenderCode[];
 
   @ApiProperty({
-    enum: CONNECTION_INTENTS,
-    isArray: true,
+    type: 'array',
+    items: {
+      type: 'string',
+      enum: [...CONNECTION_INTENTS],
+      description:
+        'Must be a currently active connection intent code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.',
+    },
     minItems: 1,
     uniqueItems: true,
   })

@@ -292,6 +292,27 @@ describe('OpenAPI contract', () => {
     );
   });
 
+  it('directs every catalog-backed profile code to the live catalog', () => {
+    const profile = schema(document, 'ProfileInput');
+    const promptAnswer = schema(document, 'ProfilePromptAnswer');
+    const activeCatalogRequirement =
+      /currently active.*GET \/v1\/catalog\/profile-options.*enum membership alone does not guarantee current activity/i;
+
+    expect(propertySchema(profile, 'genderIdentity').description).toMatch(
+      activeCatalogRequirement,
+    );
+    expect(
+      arrayItemSchema(propertySchema(profile, 'interestedInGenders'))
+        .description,
+    ).toMatch(activeCatalogRequirement);
+    expect(
+      arrayItemSchema(propertySchema(profile, 'connectionIntents')).description,
+    ).toMatch(activeCatalogRequirement);
+    expect(propertySchema(promptAnswer, 'promptCode').description).toMatch(
+      activeCatalogRequirement,
+    );
+  });
+
   it('serializes deterministically with sorted keys', () => {
     const first = serializeOpenApiDocument(document);
     const second = serializeOpenApiDocument(document);
@@ -369,6 +390,22 @@ function schema(document: OpenAPIObject, name: string): SchemaObject {
   const value = document.components?.schemas?.[name];
   if (!value || '$ref' in value) {
     throw new Error(`Expected component schema ${name}`);
+  }
+  return value;
+}
+
+function propertySchema(component: SchemaObject, name: string): SchemaObject {
+  const value = component.properties?.[name];
+  if (!value || '$ref' in value) {
+    throw new Error(`Expected inline property schema ${name}`);
+  }
+  return value;
+}
+
+function arrayItemSchema(array: SchemaObject): SchemaObject {
+  const value = array.items;
+  if (!value || '$ref' in value) {
+    throw new Error('Expected inline array item schema');
   }
   return value;
 }
