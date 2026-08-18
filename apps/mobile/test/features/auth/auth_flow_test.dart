@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:slow_dating/app/app.dart';
 import 'package:slow_dating/core/auth/auth_session_store.dart';
 import 'package:slow_dating/features/auth/data/auth_api.dart';
@@ -56,7 +57,10 @@ void main() {
     api.verifyCompleter!.complete(api.tokens);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('onboarding-screen')), findsOneWidget);
+    final onboarding = find.byKey(const ValueKey('onboarding-screen'));
+    expect(onboarding, findsOneWidget);
+    final router = GoRouter.of(tester.element(onboarding));
+    expect(router.routeInformationProvider.value.uri.path, '/onboarding');
     expect(find.text(api.tokens.accessToken), findsNothing);
     expect(find.text(api.tokens.refreshToken), findsNothing);
     expect(storage.values.keys, [AuthSessionStore.refreshTokenKey]);

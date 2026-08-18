@@ -173,7 +173,19 @@ final class AuthController extends StateNotifier<AuthState> {
         deviceName: deviceName,
         idempotencyKey: commandId,
       );
-      await _sessionStore.saveRefreshToken(tokens.refreshToken);
+      try {
+        await _sessionStore.saveRefreshToken(tokens.refreshToken);
+      } on Object {
+        await _clearPersistedRefreshToken();
+        if (!_disposed) {
+          _sessionController.signOut();
+          state = state.copyWith(
+            operation: AuthOperation.idle,
+            errorMessage: _unexpectedError,
+          );
+        }
+        return false;
+      }
       if (_disposed) {
         return false;
       }

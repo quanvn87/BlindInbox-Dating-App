@@ -145,6 +145,29 @@ void main() {
     },
   );
 
+  test(
+    'verify persistence failure clears stale token and stays signed out',
+    () async {
+      storage.values[AuthSessionStore.refreshTokenKey] = 'stored-refresh-token';
+      storage.writeFailure = StateError('sensitive storage failure detail');
+      await controller.requestOtp('0901234567');
+
+      final verified = await controller.verifyOtp(api.deliveredCode);
+
+      expect(verified, isFalse);
+      expect(await store.readRefreshToken(), isNull);
+      expect(session.value.isAuthenticated, isFalse);
+      expect(
+        controller.state.errorMessage,
+        'Something went wrong. Please try again.',
+      );
+      expect(
+        controller.state.errorMessage,
+        isNot(contains('sensitive storage failure detail')),
+      );
+    },
+  );
+
   test('restore rotates refresh token and rebuilds memory session', () async {
     await store.saveRefreshToken('stored-refresh-token');
 
