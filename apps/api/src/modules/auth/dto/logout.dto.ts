@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 
 const logoutSchema = z
@@ -8,6 +9,7 @@ const logoutSchema = z
   .strict();
 
 export class LogoutDto {
+  @ApiProperty({ maxLength: 2048 })
   refreshToken!: string;
 
   static parse(input: unknown): LogoutDto {

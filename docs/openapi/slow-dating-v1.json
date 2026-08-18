@@ -1,0 +1,757 @@
+{
+  "components": {
+    "schemas": {
+      "AuthTokens": {
+        "additionalProperties": false,
+        "properties": {
+          "accessExpiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshExpiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "accessExpiresAt",
+          "refreshToken",
+          "refreshExpiresAt"
+        ],
+        "type": "object"
+      },
+      "ConnectionIntentCatalogOption": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "CASUAL_CONVERSATION",
+              "FRIENDSHIP",
+              "LONG_TERM_DATING",
+              "SHORT_TERM_DATING",
+              "OPEN_TO_EXPLORE"
+            ],
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "GenderCatalogOption": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "MAN",
+              "WOMAN",
+              "NON_BINARY",
+              "SELF_DESCRIBED"
+            ],
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "LocationOption": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "level": {
+            "enum": [
+              "PROVINCE",
+              "DISTRICT",
+              "WARD"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentCode": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "level",
+          "parentCode",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "LogoutDto": {
+        "additionalProperties": false,
+        "properties": {
+          "refreshToken": {
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "OtpRequestResult": {
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "expiresAt"
+        ],
+        "type": "object"
+      },
+      "ProfileCatalog": {
+        "additionalProperties": false,
+        "properties": {
+          "connectionIntents": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectionIntentCatalogOption"
+            },
+            "type": "array"
+          },
+          "genders": {
+            "items": {
+              "$ref": "#/components/schemas/GenderCatalogOption"
+            },
+            "type": "array"
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/LocationOption"
+            },
+            "type": "array"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ProfilePrompt"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "genders",
+          "connectionIntents",
+          "locations",
+          "prompts"
+        ],
+        "type": "object"
+      },
+      "ProfileInput": {
+        "additionalProperties": false,
+        "properties": {
+          "bio": {
+            "type": "string"
+          },
+          "birthDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "connectionIntents": {
+            "items": {
+              "enum": [
+                "CASUAL_CONVERSATION",
+                "FRIENDSHIP",
+                "LONG_TERM_DATING",
+                "SHORT_TERM_DATING",
+                "OPEN_TO_EXPLORE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "favoriteSongArtist": {
+            "nullable": true,
+            "type": "string"
+          },
+          "favoriteSongTitle": {
+            "nullable": true,
+            "type": "string"
+          },
+          "genderIdentity": {
+            "enum": [
+              "MAN",
+              "WOMAN",
+              "NON_BINARY",
+              "SELF_DESCRIBED"
+            ],
+            "type": "string"
+          },
+          "genderLabel": {
+            "nullable": true,
+            "type": "string"
+          },
+          "heightCm": {
+            "nullable": true,
+            "type": "number"
+          },
+          "homeLocationCode": {
+            "type": "string"
+          },
+          "hometownLocationCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "interestedInGenders": {
+            "items": {
+              "enum": [
+                "MAN",
+                "WOMAN",
+                "NON_BINARY",
+                "SELF_DESCRIBED"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "promptAnswers": {
+            "items": {
+              "$ref": "#/components/schemas/ProfilePromptAnswer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "displayName",
+          "birthDate",
+          "genderIdentity",
+          "genderLabel",
+          "interestedInGenders",
+          "connectionIntents",
+          "heightCm",
+          "hometownLocationCode",
+          "homeLocationCode",
+          "bio",
+          "favoriteSongTitle",
+          "favoriteSongArtist",
+          "promptAnswers"
+        ],
+        "type": "object"
+      },
+      "ProfilePrompt": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "text",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "ProfilePromptAnswer": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "promptCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "promptCode",
+          "answer"
+        ],
+        "type": "object"
+      },
+      "RefreshTokenDto": {
+        "additionalProperties": false,
+        "properties": {
+          "refreshToken": {
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "RequestOtpDto": {
+        "additionalProperties": false,
+        "properties": {
+          "phone": {
+            "example": "+84901234567",
+            "maxLength": 50,
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "type": "object"
+      },
+      "VerifyOtpDto": {
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "code": {
+            "pattern": "^\\d{6}$",
+            "type": "string"
+          },
+          "deviceName": {
+            "maxLength": 120,
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code",
+          "deviceName"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "Authentication and profile API contract",
+    "title": "Slow Dating API",
+    "version": "1.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Session revoked"
+          },
+          "400": {
+            "description": "Invalid request or idempotency key"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/otp/request": {
+      "post": {
+        "operationId": "AuthController_requestOtp",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpRequestResult"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid request or idempotency key"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/otp/verify": {
+      "post": {
+        "operationId": "AuthController_verifyOtp",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokens"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid or expired OTP"
+          },
+          "409": {
+            "description": "OTP challenge was already consumed"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokens"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid request or idempotency key"
+          },
+          "401": {
+            "description": "Refresh token is invalid"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/catalog/profile-options": {
+      "get": {
+        "operationId": "ProfileController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileCatalog"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/v1/health/live": {
+      "get": {
+        "operationId": "HealthController_getLiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "ok"
+                      ],
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "timestamp"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_getReadiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "oracle": {
+                      "enum": [
+                        "up"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ready"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "oracle"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "description": "Oracle is unavailable"
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/me/profile": {
+      "get": {
+        "operationId": "ProfileController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "description": "Bearer access token is invalid"
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      },
+      "put": {
+        "operationId": "ProfileController_upsertProfile",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Profile or idempotency key is invalid"
+          },
+          "401": {
+            "description": "Bearer access token is invalid"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    }
+  },
+  "servers": [],
+  "tags": []
+}

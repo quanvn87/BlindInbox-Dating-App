@@ -10,6 +10,16 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiBody,
+  ApiHeader,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
 import { AccessTokenGuard } from '../auth/access-token.guard';
 import type { AccessTokenRequest } from '../auth/access-token.guard';
@@ -20,10 +30,18 @@ import {
 } from './profile.repository';
 import { ProfileService } from './profile.service';
 import { ProfileError } from './profile.types';
-import type { ProfileCatalog, ProfileInput } from './profile.types';
-import { UpsertProfileDto } from './dto/upsert-profile.dto';
+import type {
+  ProfileCatalog as ProfileCatalogContract,
+  ProfileInput,
+} from './profile.types';
+import { ProfileCatalog } from './dto/profile-catalog.dto';
+import {
+  ProfileInput as ProfileInputDto,
+  UpsertProfileDto,
+} from './dto/upsert-profile.dto';
 
 @Controller()
+@ApiTags('profile')
 export class ProfileController {
   constructor(
     @Inject(PROFILE_REPOSITORY)
@@ -33,12 +51,17 @@ export class ProfileController {
   ) {}
 
   @Get('catalog/profile-options')
-  getCatalog(): Promise<ProfileCatalog> {
+  @ApiOkResponse({ type: ProfileCatalog })
+  getCatalog(): Promise<ProfileCatalogContract> {
     return this.repository.getCatalog();
   }
 
   @Get('me/profile')
   @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth('bearer')
+  @ApiOkResponse({ type: ProfileInputDto })
+  @ApiUnauthorizedResponse({ description: 'Bearer access token is invalid' })
+  @ApiNotFoundResponse({ description: 'Profile not found' })
   async getProfile(@Req() request: AccessTokenRequest): Promise<ProfileInput> {
     const profile = await this.repository.findByUserId(request.accessToken.sub);
     if (!profile) {
@@ -49,6 +72,18 @@ export class ProfileController {
 
   @Put('me/profile')
   @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth('bearer')
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiBody({ type: ProfileInputDto })
+  @ApiOkResponse({ type: ProfileInputDto })
+  @ApiBadRequestResponse({
+    description: 'Profile or idempotency key is invalid',
+  })
+  @ApiUnauthorizedResponse({ description: 'Bearer access token is invalid' })
   upsertProfile(
     @Req() request: AccessTokenRequest,
     @Headers('idempotency-key') idempotencyKey: unknown,

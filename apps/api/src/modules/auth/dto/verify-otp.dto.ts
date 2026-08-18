@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 
 const verifyOtpSchema = z
@@ -10,8 +11,13 @@ const verifyOtpSchema = z
   .strict();
 
 export class VerifyOtpDto {
+  @ApiProperty({ format: 'uuid' })
   challengeId!: string;
+
+  @ApiProperty({ pattern: '^\\d{6}$' })
   code!: string;
+
+  @ApiProperty({ maxLength: 120 })
   deviceName!: string;
 
   static parse(input: unknown): VerifyOtpDto {

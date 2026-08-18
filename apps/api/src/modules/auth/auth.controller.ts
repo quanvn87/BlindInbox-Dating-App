@@ -9,18 +9,34 @@ import {
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
+import {
+  ApiAcceptedResponse,
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiConflictResponse,
+  ApiHeader,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 import { IdempotencyKeyPipe } from '../../common/http/idempotency-key.pipe';
 import { AuthService } from './auth.service';
 import { AuthError } from './auth.types';
-import type { AuthTokens, OtpRequestResult } from './auth.types';
+import type {
+  AuthTokens as AuthTokensContract,
+  OtpRequestResult as OtpRequestResultContract,
+} from './auth.types';
+import { AuthTokens, OtpRequestResult } from './dto/auth-tokens.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @Controller('auth')
+@ApiTags('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -29,10 +45,18 @@ export class AuthController {
 
   @Post('otp/request')
   @HttpCode(HttpStatus.ACCEPTED)
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiBody({ type: RequestOtpDto })
+  @ApiAcceptedResponse({ type: OtpRequestResult })
+  @ApiBadRequestResponse({ description: 'Invalid request or idempotency key' })
   requestOtp(
     @Headers('idempotency-key') idempotencyKey: unknown,
     @Body() body: unknown,
-  ): Promise<OtpRequestResult> {
+  ): Promise<OtpRequestResultContract> {
     this.idempotencyKeyPipe.transform(idempotencyKey);
     const dto = RequestOtpDto.parse(body);
     return this.authService.requestOtp(
@@ -42,10 +66,19 @@ export class AuthController {
 
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiBody({ type: VerifyOtpDto })
+  @ApiOkResponse({ type: AuthTokens })
+  @ApiBadRequestResponse({ description: 'Invalid or expired OTP' })
+  @ApiConflictResponse({ description: 'OTP challenge was already consumed' })
   verifyOtp(
     @Headers('idempotency-key') idempotencyKey: unknown,
     @Body() body: unknown,
-  ): Promise<AuthTokens> {
+  ): Promise<AuthTokensContract> {
     this.idempotencyKeyPipe.transform(idempotencyKey);
     const dto = VerifyOtpDto.parse(body);
     return this.mapAuthErrors(() =>
@@ -55,10 +88,19 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiOkResponse({ type: AuthTokens })
+  @ApiBadRequestResponse({ description: 'Invalid request or idempotency key' })
+  @ApiUnauthorizedResponse({ description: 'Refresh token is invalid' })
   refresh(
     @Headers('idempotency-key') idempotencyKey: unknown,
     @Body() body: unknown,
-  ): Promise<AuthTokens> {
+  ): Promise<AuthTokensContract> {
     this.idempotencyKeyPipe.transform(idempotencyKey);
     const dto = RefreshTokenDto.parse(body);
     return this.mapAuthErrors(() => this.authService.refresh(dto.refreshToken));
@@ -66,6 +108,14 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiBody({ type: LogoutDto })
+  @ApiNoContentResponse({ description: 'Session revoked' })
+  @ApiBadRequestResponse({ description: 'Invalid request or idempotency key' })
   async logout(
     @Headers('idempotency-key') idempotencyKey: unknown,
     @Body() body: unknown,

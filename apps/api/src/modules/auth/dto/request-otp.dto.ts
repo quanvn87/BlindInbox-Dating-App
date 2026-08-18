@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 
 const requestOtpSchema = z
@@ -8,6 +9,7 @@ const requestOtpSchema = z
   .strict();
 
 export class RequestOtpDto {
+  @ApiProperty({ example: '+84901234567', maxLength: 50 })
   phone!: string;
 
   static parse(input: unknown): RequestOtpDto {

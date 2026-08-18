@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 
 import {
@@ -6,7 +7,7 @@ import {
   GENDER_CODES,
   type ConnectionIntent,
   type GenderCode,
-  type ProfileInput,
+  type ProfileInput as ProfileInputContract,
 } from '../profile.types';
 
 const upsertProfileSchema = z
@@ -34,26 +35,61 @@ const upsertProfileSchema = z
   })
   .strict();
 
-export class UpsertProfileDto implements ProfileInput {
+class ProfilePromptAnswer {
+  @ApiProperty()
+  promptCode!: string;
+
+  @ApiProperty()
+  answer!: string;
+}
+
+export class ProfileInput implements ProfileInputContract {
+  @ApiProperty()
   displayName!: string;
+
+  @ApiProperty({ format: 'date' })
   birthDate!: string;
+
+  @ApiProperty({ enum: GENDER_CODES })
   genderIdentity!: GenderCode;
+
+  @ApiProperty({ type: String, nullable: true })
   genderLabel!: string | null;
+
+  @ApiProperty({ enum: GENDER_CODES, isArray: true })
   interestedInGenders!: GenderCode[];
+
+  @ApiProperty({ enum: CONNECTION_INTENTS, isArray: true })
   connectionIntents!: ConnectionIntent[];
+
+  @ApiProperty({ type: Number, nullable: true })
   heightCm!: number | null;
+
+  @ApiProperty({ type: String, nullable: true })
   hometownLocationCode!: string | null;
+
+  @ApiProperty()
   homeLocationCode!: string;
+
+  @ApiProperty()
   bio!: string;
+
+  @ApiProperty({ type: String, nullable: true })
   favoriteSongTitle!: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
   favoriteSongArtist!: string | null;
+
+  @ApiProperty({ type: () => [ProfilePromptAnswer] })
   promptAnswers!: Array<{ promptCode: string; answer: string }>;
 
-  static parse(input: unknown): UpsertProfileDto {
+  static parse(input: unknown): ProfileInput {
     const result = upsertProfileSchema.safeParse(input);
     if (!result.success) {
       throw new BadRequestException('Invalid profile');
     }
-    return Object.assign(new UpsertProfileDto(), result.data);
+    return Object.assign(new ProfileInput(), result.data);
   }
 }
+
+export { ProfileInput as UpsertProfileDto };

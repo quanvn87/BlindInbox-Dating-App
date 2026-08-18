@@ -1,0 +1,292 @@
+import type {
+  OpenAPIObject,
+  OperationObject,
+  ReferenceObject,
+  SchemaObject,
+} from '@nestjs/swagger';
+
+import { createOpenApiDocument, serializeOpenApiDocument } from './openapi';
+
+describe('OpenAPI contract', () => {
+  let document: OpenAPIObject;
+
+  beforeAll(async () => {
+    document = await createOpenApiDocument();
+  });
+
+  it('publishes every v1 health, auth, catalog, and profile operation', () => {
+    expect(Object.keys(document.paths)).toEqual(
+      expect.arrayContaining([
+        '/v1/auth/logout',
+        '/v1/auth/otp/request',
+        '/v1/auth/otp/verify',
+        '/v1/auth/refresh',
+        '/v1/catalog/profile-options',
+        '/v1/health/live',
+        '/v1/health/ready',
+        '/v1/me/profile',
+      ]),
+    );
+
+    expect(document.paths['/v1/health/live']?.get?.responses).toHaveProperty(
+      '200',
+    );
+    expect(document.paths['/v1/health/ready']?.get?.responses).toHaveProperty(
+      '200',
+    );
+    expect(
+      document.paths['/v1/auth/otp/request']?.post?.responses,
+    ).toHaveProperty('202');
+    expect(
+      document.paths['/v1/auth/otp/verify']?.post?.responses,
+    ).toHaveProperty('200');
+    expect(document.paths['/v1/auth/refresh']?.post?.responses).toHaveProperty(
+      '200',
+    );
+    expect(document.paths['/v1/auth/logout']?.post?.responses).toHaveProperty(
+      '204',
+    );
+    expect(
+      document.paths['/v1/catalog/profile-options']?.get?.responses,
+    ).toHaveProperty('200');
+    expect(document.paths['/v1/me/profile']?.get?.responses).toHaveProperty(
+      '200',
+    );
+    expect(document.paths['/v1/me/profile']?.put?.responses).toHaveProperty(
+      '200',
+    );
+  });
+
+  it('requires bearer authentication only for protected profile operations', () => {
+    expect(document.components?.securitySchemes?.bearer).toMatchObject({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+    });
+    expect(document.paths['/v1/me/profile']?.get?.security).toEqual([
+      { bearer: [] },
+    ]);
+    expect(document.paths['/v1/me/profile']?.put?.security).toEqual([
+      { bearer: [] },
+    ]);
+    expect(document.paths['/v1/auth/refresh']?.post?.security).toBeUndefined();
+    expect(
+      document.paths['/v1/catalog/profile-options']?.get?.security,
+    ).toBeUndefined();
+  });
+
+  it('requires a UUID Idempotency-Key on every side-effecting command', () => {
+    const commands = [
+      document.paths['/v1/auth/otp/request']?.post,
+      document.paths['/v1/auth/otp/verify']?.post,
+      document.paths['/v1/auth/refresh']?.post,
+      document.paths['/v1/auth/logout']?.post,
+      document.paths['/v1/me/profile']?.put,
+    ];
+
+    for (const operation of commands) {
+      expect(getHeader(operation, 'Idempotency-Key')).toMatchObject({
+        in: 'header',
+        required: true,
+        schema: { type: 'string', format: 'uuid' },
+      });
+    }
+    expect(
+      getHeader(document.paths['/v1/me/profile']?.get, 'Idempotency-Key'),
+    ).toBeUndefined();
+  });
+
+  it('publishes strict request schemas', () => {
+    const cases: Array<[OperationObject | undefined, string[]]> = [
+      [document.paths['/v1/auth/otp/request']?.post, ['phone']],
+      [
+        document.paths['/v1/auth/otp/verify']?.post,
+        ['challengeId', 'code', 'deviceName'],
+      ],
+      [document.paths['/v1/auth/refresh']?.post, ['refreshToken']],
+      [document.paths['/v1/auth/logout']?.post, ['refreshToken']],
+    ];
+
+    for (const [operation, required] of cases) {
+      const schema = requestSchema(document, operation);
+      expect(schema.additionalProperties).toBe(false);
+      expect(schema.required?.sort()).toEqual([...required].sort());
+    }
+
+    const profile = requestSchema(
+      document,
+      document.paths['/v1/me/profile']?.put,
+    );
+    expect(profile).toBe(document.components?.schemas?.ProfileInput);
+    expect(profile.additionalProperties).toBe(false);
+    expect(profile.required).toHaveLength(13);
+  });
+
+  it('keeps the stable AuthTokens and ProfileInput component schemas', () => {
+    const authTokens = schema(document, 'AuthTokens');
+    expect(authTokens).toMatchObject({
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'accessToken',
+        'accessExpiresAt',
+        'refreshToken',
+        'refreshExpiresAt',
+      ],
+    });
+    expect(authTokens.properties).toMatchObject({
+      accessToken: { type: 'string' },
+      accessExpiresAt: { type: 'string', format: 'date-time' },
+      refreshToken: { type: 'string' },
+      refreshExpiresAt: { type: 'string', format: 'date-time' },
+    });
+
+    const profile = schema(document, 'ProfileInput');
+    expect(profile.required).toEqual([
+      'displayName',
+      'birthDate',
+      'genderIdentity',
+      'genderLabel',
+      'interestedInGenders',
+      'connectionIntents',
+      'heightCm',
+      'hometownLocationCode',
+      'homeLocationCode',
+      'bio',
+      'favoriteSongTitle',
+      'favoriteSongArtist',
+      'promptAnswers',
+    ]);
+    expect(profile.properties).toMatchObject({
+      birthDate: { type: 'string', format: 'date' },
+      genderIdentity: {
+        type: 'string',
+        enum: ['MAN', 'WOMAN', 'NON_BINARY', 'SELF_DESCRIBED'],
+      },
+      interestedInGenders: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['MAN', 'WOMAN', 'NON_BINARY', 'SELF_DESCRIBED'],
+        },
+      },
+      connectionIntents: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: [
+            'CASUAL_CONVERSATION',
+            'FRIENDSHIP',
+            'LONG_TERM_DATING',
+            'SHORT_TERM_DATING',
+            'OPEN_TO_EXPLORE',
+          ],
+        },
+      },
+      heightCm: { type: 'number', nullable: true },
+      promptAnswers: { type: 'array' },
+    });
+  });
+
+  it('serializes deterministically with sorted keys', () => {
+    const first = serializeOpenApiDocument(document);
+    const second = serializeOpenApiDocument(document);
+
+    expect(second).toBe(first);
+    expect(first.endsWith('\n')).toBe(true);
+    expect(first.indexOf('"components"')).toBeLessThan(
+      first.indexOf('"openapi"'),
+    );
+  });
+
+  it('contains no dangling local component references', () => {
+    const references = collectReferences(document);
+
+    for (const reference of references) {
+      const name = reference.replace('#/components/schemas/', '');
+      expect(document.components?.schemas).toHaveProperty(name);
+    }
+  });
+
+  it('models catalog option codes and readiness failure accurately', () => {
+    expect(
+      schema(document, 'GenderCatalogOption').properties?.code,
+    ).toMatchObject({
+      enum: ['MAN', 'WOMAN', 'NON_BINARY', 'SELF_DESCRIBED'],
+    });
+    expect(
+      schema(document, 'ConnectionIntentCatalogOption').properties?.code,
+    ).toMatchObject({
+      enum: [
+        'CASUAL_CONVERSATION',
+        'FRIENDSHIP',
+        'LONG_TERM_DATING',
+        'SHORT_TERM_DATING',
+        'OPEN_TO_EXPLORE',
+      ],
+    });
+    expect(document.paths['/v1/health/ready']?.get?.responses).toHaveProperty(
+      '500',
+    );
+    expect(
+      document.paths['/v1/health/ready']?.get?.responses,
+    ).not.toHaveProperty('503');
+  });
+});
+
+function getHeader(
+  operation: OperationObject | undefined,
+  name: string,
+): ReferenceObject | undefined {
+  return operation?.parameters?.find(
+    (parameter) => '$ref' in parameter || parameter.name === name,
+  );
+}
+
+function requestSchema(
+  document: OpenAPIObject,
+  operation: OperationObject | undefined,
+): SchemaObject {
+  const content = operation?.requestBody;
+  if (!content || '$ref' in content) {
+    throw new Error('Expected inline request body');
+  }
+  const value = content.content['application/json']?.schema;
+  if (!value) {
+    throw new Error('Expected JSON request schema');
+  }
+  if ('$ref' in value) {
+    return schema(document, value.$ref.split('/').at(-1) as string);
+  }
+  return value;
+}
+
+function schema(document: OpenAPIObject, name: string): SchemaObject {
+  const value = document.components?.schemas?.[name];
+  if (!value || '$ref' in value) {
+    throw new Error(`Expected component schema ${name}`);
+  }
+  return value;
+}
+
+function collectReferences(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap(collectReferences);
+  }
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+
+  const entries = Object.entries(value);
+  return [
+    ...entries.flatMap(([, child]) => collectReferences(child)),
+    ...entries
+      .filter(
+        ([key, child]) =>
+          key === '$ref' &&
+          typeof child === 'string' &&
+          child.startsWith('#/components/schemas/'),
+      )
+      .map(([, child]) => child as string),
+  ];
+}
