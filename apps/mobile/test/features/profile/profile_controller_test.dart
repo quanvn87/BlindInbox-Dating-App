@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:slow_dating/core/auth/auth_session.dart';
 import 'package:slow_dating/features/profile/data/profile_api.dart';
@@ -57,6 +58,85 @@ void main() {
       expect(draft.hasRequiredFields, isTrue);
       expect(draft.toInput().toJson()['genderLabel'], 'genderfluid');
       expect(draft.copyWith(genderLabel: ' ').hasRequiredFields, isFalse);
+    });
+
+    test('accepts exact UTF-16 length boundaries from the server contract', () {
+      const base = ProfileDraft(
+        displayName: 'OK',
+        birthDate: '1990-02-03',
+        genderIdentity: 'MAN',
+        interestedInGenders: ['MAN'],
+        connectionIntents: ['FRIENDSHIP'],
+        homeLocationCode: 'P-HCM',
+      );
+      final fiftyUnits = _repeat('😀', 25);
+      final fiveHundredUnits = _repeat('😀', 250);
+      final twoHundredEightyUnits = _repeat('😀', 140);
+      expect(fiftyUnits.length, 50);
+      expect(fiveHundredUnits.length, 500);
+      expect(twoHundredEightyUnits.length, 280);
+
+      expect(base.copyWith(displayName: '  AB').canSubmit, isTrue);
+      expect(base.copyWith(displayName: fiftyUnits).canSubmit, isTrue);
+      expect(
+        base
+            .copyWith(genderIdentity: 'SELF_DESCRIBED', genderLabel: fiftyUnits)
+            .canSubmit,
+        isTrue,
+      );
+      expect(base.copyWith(bio: fiveHundredUnits).canSubmit, isTrue);
+      expect(
+        base
+            .copyWith(promptAnswers: {'SLOW_DATE': twoHundredEightyUnits})
+            .canSubmit,
+        isTrue,
+      );
+    });
+
+    test('rejects over-boundary and blank contract strings', () {
+      const base = ProfileDraft(
+        displayName: 'OK',
+        birthDate: '1990-02-03',
+        genderIdentity: 'MAN',
+        interestedInGenders: ['MAN'],
+        connectionIntents: ['FRIENDSHIP'],
+        homeLocationCode: 'P-HCM',
+      );
+      final fiftyOneUnits = '${_repeat('😀', 25)}x';
+      final fiveHundredOneUnits = '${_repeat('😀', 250)}x';
+      final twoHundredEightyOneUnits = '${_repeat('😀', 140)}x';
+      expect(fiftyOneUnits.length, 51);
+      expect(fiveHundredOneUnits.length, 501);
+      expect(twoHundredEightyOneUnits.length, 281);
+
+      expect(base.copyWith(displayName: ' a ').canSubmit, isFalse);
+      expect(base.copyWith(displayName: fiftyOneUnits).canSubmit, isFalse);
+      expect(
+        base
+            .copyWith(genderIdentity: 'SELF_DESCRIBED', genderLabel: ' x ')
+            .canSubmit,
+        isFalse,
+      );
+      expect(
+        base
+            .copyWith(
+              genderIdentity: 'SELF_DESCRIBED',
+              genderLabel: fiftyOneUnits,
+            )
+            .canSubmit,
+        isFalse,
+      );
+      expect(base.copyWith(bio: fiveHundredOneUnits).canSubmit, isFalse);
+      expect(
+        base.copyWith(promptAnswers: const {'SLOW_DATE': '   '}).canSubmit,
+        isFalse,
+      );
+      expect(
+        base
+            .copyWith(promptAnswers: {'SLOW_DATE': twoHundredEightyOneUnits})
+            .canSubmit,
+        isFalse,
+      );
     });
   });
 
@@ -232,7 +312,148 @@ void main() {
       );
     });
   });
+
+  test(
+    'unauthorized submit retains draft through disposal and reauthentication',
+    () async {
+      final api = FakeProfileApi()
+        ..putFailure = const ProfileApiException(
+          ProfileApiFailure.unauthorized,
+          'Your session has expired. Please sign in again.',
+        );
+      final session = AuthSessionController(
+        AuthSession.authenticated(
+          accessToken: 'first-memory-token',
+          isProfileComplete: false,
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          profileApiProvider.overrideWithValue(api),
+          authSessionControllerProvider.overrideWith((ref) => session),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final firstSubscription = container.listen(
+        profileControllerProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      final firstController = container.read(
+        profileControllerProvider.notifier,
+      );
+      firstController.setDisplayName('Retained Minh');
+      firstController.setBirthDate('1990-02-03');
+      firstController.setGenderIdentity('SELF_DESCRIBED');
+      firstController.setGenderLabel('Genderfluid');
+      firstController.toggleInterestedGender('MAN');
+      firstController.toggleInterestedGender('WOMAN');
+      firstController.toggleConnectionIntent('FRIENDSHIP');
+      firstController.setHomeLocation('W-BEN-NGHE');
+      firstController.setHometownLocation('P-HN');
+      firstController.setHeightCm('172');
+      firstController.setBio('A retained bio');
+      firstController.setFavoriteSongTitle('Retained song');
+      firstController.setFavoriteSongArtist('Retained artist');
+      firstController.setPromptAnswer('SLOW_DATE', 'A quiet retained coffee');
+      final before = firstController.state.draft;
+
+      expect(await firstController.submit(), isFalse);
+      expect(session.value.isAuthenticated, isFalse);
+      firstSubscription.close();
+      await container.pump();
+
+      session.authenticate(
+        accessToken: 'second-memory-token',
+        isProfileComplete: false,
+      );
+      final secondSubscription = container.listen(
+        profileControllerProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      final secondController = container.read(
+        profileControllerProvider.notifier,
+      );
+      final retained = secondController.state.draft;
+
+      expect(secondController, isNot(same(firstController)));
+      expect(retained.displayName, before.displayName);
+      expect(retained.genderIdentity, before.genderIdentity);
+      expect(retained.genderLabel, before.genderLabel);
+      expect(retained.interestedInGenders, before.interestedInGenders);
+      expect(retained.connectionIntents, before.connectionIntents);
+      expect(retained.homeLocationCode, before.homeLocationCode);
+      expect(retained.hometownLocationCode, before.hometownLocationCode);
+      expect(retained.heightCm, before.heightCm);
+      expect(retained.bio, before.bio);
+      expect(retained.favoriteSongTitle, before.favoriteSongTitle);
+      expect(retained.favoriteSongArtist, before.favoriteSongArtist);
+      expect(retained.promptAnswers, before.promptAnswers);
+      final serializedDraft = retained.toInput().toJson().toString();
+      expect(serializedDraft, isNot(contains('first-memory-token')));
+      expect(serializedDraft, isNot(contains('second-memory-token')));
+
+      api.putFailure = null;
+      expect(await secondController.submit(), isTrue);
+      secondSubscription.close();
+      await container.pump();
+
+      final thirdSubscription = container.listen(
+        profileControllerProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      addTearDown(thirdSubscription.close);
+      expect(
+        container.read(profileControllerProvider).draft,
+        const ProfileDraft(),
+      );
+    },
+  );
+
+  test('explicit discard clears the retained draft', () async {
+    final session = AuthSessionController(
+      AuthSession.authenticated(
+        accessToken: 'memory-token',
+        isProfileComplete: false,
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        profileApiProvider.overrideWithValue(FakeProfileApi()),
+        authSessionControllerProvider.overrideWith((ref) => session),
+      ],
+    );
+    addTearDown(container.dispose);
+    final firstSubscription = container.listen(
+      profileControllerProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    final firstController = container.read(profileControllerProvider.notifier);
+    firstController.setDisplayName('Discard me');
+
+    firstController.discardDraft();
+    expect(firstController.state.draft, const ProfileDraft());
+    firstSubscription.close();
+    await container.pump();
+
+    final secondSubscription = container.listen(
+      profileControllerProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    addTearDown(secondSubscription.close);
+    expect(
+      container.read(profileControllerProvider).draft,
+      const ProfileDraft(),
+    );
+  });
 }
+
+String _repeat(String value, int count) => List.filled(count, value).join();
 
 void _completeDraft(
   ProfileController controller, {

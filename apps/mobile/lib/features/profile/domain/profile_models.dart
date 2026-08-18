@@ -329,9 +329,33 @@ final class ProfileDraft {
 
   bool get canSubmit =>
       hasRequiredFields &&
+      displayNameError == null &&
+      genderLabelError == null &&
       birthDateError == null &&
       heightError == null &&
-      favoriteSongError == null;
+      favoriteSongError == null &&
+      bioError == null &&
+      promptAnswersError == null;
+
+  String? get displayNameError {
+    if (displayName.isEmpty) {
+      return null;
+    }
+    if (displayName.trim().length < 2 || displayName.length > 50) {
+      return 'Display name must be 2 to 50 characters.';
+    }
+    return null;
+  }
+
+  String? get genderLabelError {
+    if (genderIdentity != 'SELF_DESCRIBED' || genderLabel.isEmpty) {
+      return null;
+    }
+    if (genderLabel.trim().length < 2 || genderLabel.length > 50) {
+      return 'Describe your gender in 2 to 50 characters.';
+    }
+    return null;
+  }
 
   String? get birthDateError {
     final value = birthDate.trim();
@@ -369,6 +393,33 @@ final class ProfileDraft {
     final hasArtist = favoriteSongArtist.trim().isNotEmpty;
     if (hasTitle != hasArtist) {
       return 'Add both song title and artist, or leave both blank.';
+    }
+    return null;
+  }
+
+  String? get bioError =>
+      bio.length > 500 ? 'Bio must be 500 characters or fewer.' : null;
+
+  String? get promptAnswersError {
+    for (final entry in promptAnswers.entries) {
+      if (entry.key.trim().isEmpty ||
+          entry.value.trim().isEmpty ||
+          entry.value.length > 280) {
+        return 'Answer must be nonblank and 280 characters or fewer.';
+      }
+    }
+    return null;
+  }
+
+  String? promptAnswerError(String promptCode) {
+    final answer = promptAnswers[promptCode];
+    if (answer == null) {
+      return null;
+    }
+    if (promptCode.trim().isEmpty ||
+        answer.trim().isEmpty ||
+        answer.length > 280) {
+      return 'Answer must be nonblank and 280 characters or fewer.';
     }
     return null;
   }

@@ -8,6 +8,25 @@ import 'package:slow_dating/features/profile/domain/profile_models.dart';
 
 typedef ProfileIdGenerator = String Function();
 
+/// Keeps an unfinished profile in memory across onboarding route lifecycles.
+///
+/// The store deliberately contains only [ProfileDraft], never authentication
+/// credentials. Its provider is not auto-disposed so a 401 redirect can sign
+/// the user out without losing their work before they authenticate again.
+final class ProfileDraftStore {
+  ProfileDraft _draft = const ProfileDraft();
+
+  ProfileDraft get draft => _draft;
+
+  void save(ProfileDraft draft) {
+    _draft = draft;
+  }
+
+  void clear() {
+    _draft = const ProfileDraft();
+  }
+}
+
 @immutable
 final class ProfileState {
   const ProfileState({
@@ -58,21 +77,26 @@ final class ProfileController extends StateNotifier<ProfileState> {
     required ProfileApi api,
     required AuthSessionController sessionController,
     ProfileIdGenerator? generateId,
+    ProfileDraftStore? draftStore,
   }) => ProfileController._(
     api: api,
     sessionController: sessionController,
     generateId: generateId ?? generateProfileCommandId,
+    draftStore: draftStore ?? ProfileDraftStore(),
   );
 
   ProfileController._({
     required this._api,
     required this._sessionController,
     required this._generateId,
-  }) : super(const ProfileState());
+    required ProfileDraftStore draftStore,
+  }) : _draftStore = draftStore,
+       super(ProfileState(draft: draftStore.draft));
 
   final ProfileApi _api;
   final AuthSessionController _sessionController;
   final ProfileIdGenerator _generateId;
+  final ProfileDraftStore _draftStore;
 
   bool _disposed = false;
 
@@ -193,7 +217,12 @@ final class ProfileController extends StateNotifier<ProfileState> {
       if (_disposed) {
         return false;
       }
-      state = state.copyWith(isSubmitting: false, submitError: null);
+      _draftStore.clear();
+      state = state.copyWith(
+        draft: const ProfileDraft(),
+        isSubmitting: false,
+        submitError: null,
+      );
       _sessionController.markProfileComplete();
       return true;
     } on ProfileApiException catch (error) {
@@ -222,7 +251,16 @@ final class ProfileController extends StateNotifier<ProfileState> {
     if (_disposed || state.isSubmitting) {
       return;
     }
+    _draftStore.save(draft);
     state = state.copyWith(draft: draft, submitError: null);
+  }
+
+  void discardDraft() {
+    if (_disposed || state.isSubmitting) {
+      return;
+    }
+    _draftStore.clear();
+    state = state.copyWith(draft: const ProfileDraft(), submitError: null);
   }
 
   List<String> _toggle(List<String> values, String code) {
@@ -256,10 +294,15 @@ String generateProfileCommandId() {
 const _unexpectedError = 'Something went wrong. Please try again.';
 const _sessionExpiredError = 'Your session has expired. Please sign in again.';
 
+final profileDraftStoreProvider = Provider<ProfileDraftStore>(
+  (ref) => ProfileDraftStore(),
+);
+
 final profileControllerProvider =
     StateNotifierProvider.autoDispose<ProfileController, ProfileState>((ref) {
       return ProfileController(
         api: ref.watch(profileApiProvider),
         sessionController: ref.read(authSessionControllerProvider),
+        draftStore: ref.read(profileDraftStoreProvider),
       );
     });

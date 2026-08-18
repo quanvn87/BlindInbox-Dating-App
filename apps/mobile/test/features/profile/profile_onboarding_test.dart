@@ -165,6 +165,102 @@ void main() {
     );
   });
 
+  testWidgets('programmatic over-limit text keeps submit disabled', (
+    tester,
+  ) async {
+    final harness = await _pumpOnboarding(tester);
+    addTearDown(harness.dispose);
+    final controller = harness.container.read(
+      profileControllerProvider.notifier,
+    );
+    controller.setDisplayName('${List.filled(25, '😀').join()}x');
+    controller.setBirthDate('1990-02-03');
+    controller.setGenderIdentity('MAN');
+    controller.toggleInterestedGender('MAN');
+    controller.toggleConnectionIntent('FRIENDSHIP');
+    controller.setHomeLocation('W-BEN-NGHE');
+    controller.setBio('${List.filled(250, '😀').join()}x');
+    controller.setPromptAnswer(
+      'SLOW_DATE',
+      '${List.filled(140, '😀').join()}x',
+    );
+    await tester.pump();
+
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Complete profile'),
+    );
+    expect(button.onPressed, isNull);
+    expect(
+      find.text('Display name must be 2 to 50 characters.'),
+      findsOneWidget,
+    );
+    expect(find.text('Bio must be 500 characters or fewer.'), findsOneWidget);
+    expect(
+      find.text('Answer must be nonblank and 280 characters or fewer.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'changing province clears stale district and ward UI and serialization',
+    (tester) async {
+      final harness = await _pumpOnboarding(tester);
+      addTearDown(harness.dispose);
+      final controller = harness.container.read(
+        profileControllerProvider.notifier,
+      );
+
+      await _selectDropdown(
+        tester,
+        const ValueKey('home-location-province'),
+        'Ho Chi Minh City',
+      );
+      await _selectDropdown(
+        tester,
+        const ValueKey('home-location-district'),
+        'District 1',
+      );
+      await _selectDropdown(
+        tester,
+        const ValueKey('home-location-ward'),
+        'Ben Nghe Ward',
+      );
+      expect(controller.state.draft.homeLocationCode, 'W-BEN-NGHE');
+
+      await _selectDropdown(
+        tester,
+        const ValueKey('home-location-province'),
+        'Ha Noi',
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(controller.state.draft.homeLocationCode, 'P-HN');
+      expect(
+        controller.state.draft.toInput().toJson()['homeLocationCode'],
+        'P-HN',
+      );
+      expect(find.text('District 1'), findsNothing);
+      expect(find.text('Ben Nghe Ward'), findsNothing);
+
+      final district = tester.widget<DropdownButtonFormField<String>>(
+        find.descendant(
+          of: find.byKey(const ValueKey('home-location-district')),
+          matching: find.byType(DropdownButtonFormField<String>),
+        ),
+      );
+      final ward = tester.widget<DropdownButtonFormField<String>>(
+        find.descendant(
+          of: find.byKey(const ValueKey('home-location-ward')),
+          matching: find.byType(DropdownButtonFormField<String>),
+        ),
+      );
+      expect(district.initialValue, isNull);
+      expect(district.onChanged, isNull);
+      expect(ward.initialValue, isNull);
+      expect(ward.onChanged, isNull);
+    },
+  );
+
   testWidgets('catalog error renders safe retry affordance', (tester) async {
     final api = FakeProfileApi()
       ..catalogFailure = const ProfileApiException(
@@ -182,6 +278,19 @@ void main() {
     );
     expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
   });
+}
+
+Future<void> _selectDropdown(
+  WidgetTester tester,
+  Key key,
+  String option,
+) async {
+  final field = find.byKey(key);
+  await tester.ensureVisible(field);
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option).last);
+  await tester.pumpAndSettle();
 }
 
 Future<_Harness> _pumpOnboarding(

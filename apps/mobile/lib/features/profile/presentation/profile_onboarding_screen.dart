@@ -109,7 +109,7 @@ final class _ProfileForm extends ConsumerWidget {
             decoration: const InputDecoration(
               labelText: 'Display name *',
               border: OutlineInputBorder(),
-            ),
+            ).copyWith(errorText: draft.displayNameError),
             maxLength: 50,
             textInputAction: TextInputAction.next,
             onChanged: controller.setDisplayName,
@@ -165,7 +165,7 @@ final class _ProfileForm extends ConsumerWidget {
               decoration: const InputDecoration(
                 labelText: 'Describe your gender *',
                 border: OutlineInputBorder(),
-              ),
+              ).copyWith(errorText: draft.genderLabelError),
               maxLength: 50,
               onChanged: controller.setGenderLabel,
             ),
@@ -228,7 +228,7 @@ final class _ProfileForm extends ConsumerWidget {
             decoration: const InputDecoration(
               labelText: 'Bio',
               border: OutlineInputBorder(),
-            ),
+            ).copyWith(errorText: draft.bioError),
             maxLength: 500,
             maxLines: 4,
             onChanged: controller.setBio,
@@ -262,6 +262,7 @@ final class _ProfileForm extends ConsumerWidget {
               decoration: InputDecoration(
                 labelText: prompt.text,
                 border: const OutlineInputBorder(),
+                errorText: draft.promptAnswerError(prompt.code),
               ),
               maxLength: 280,
               maxLines: 3,

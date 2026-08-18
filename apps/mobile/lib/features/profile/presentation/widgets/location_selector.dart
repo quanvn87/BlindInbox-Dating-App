@@ -58,28 +58,45 @@ final class LocationSelector extends StatelessWidget {
       children: [
         Text(title, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        _LocationDropdown(
+        KeyedSubtree(
           key: ValueKey('$keyPrefix-province'),
-          label: isRequired ? 'Province or city *' : 'Province or city',
-          options: provinces,
-          value: province?.code,
-          onChanged: onChanged,
+          child: _LocationDropdown(
+            key: ValueKey(
+              '$keyPrefix-province-value-${province?.code ?? 'none'}',
+            ),
+            label: isRequired ? 'Province or city *' : 'Province or city',
+            options: provinces,
+            value: province?.code,
+            onChanged: provinces.isEmpty ? null : onChanged,
+          ),
         ),
         const SizedBox(height: 8),
-        _LocationDropdown(
+        KeyedSubtree(
           key: ValueKey('$keyPrefix-district'),
-          label: 'District',
-          options: districts,
-          value: district?.code,
-          onChanged: province == null ? null : onChanged,
+          child: _LocationDropdown(
+            key: ValueKey(
+              '$keyPrefix-district-${province?.code ?? 'none'}-'
+              '${district?.code ?? 'none'}',
+            ),
+            label: 'District',
+            options: districts,
+            value: district?.code,
+            onChanged: province == null || districts.isEmpty ? null : onChanged,
+          ),
         ),
         const SizedBox(height: 8),
-        _LocationDropdown(
+        KeyedSubtree(
           key: ValueKey('$keyPrefix-ward'),
-          label: 'Ward',
-          options: wards,
-          value: ward?.code,
-          onChanged: district == null ? null : onChanged,
+          child: _LocationDropdown(
+            key: ValueKey(
+              '$keyPrefix-ward-${district?.code ?? 'none'}-'
+              '${ward?.code ?? 'none'}',
+            ),
+            label: 'Ward',
+            options: wards,
+            value: ward?.code,
+            onChanged: district == null || wards.isEmpty ? null : onChanged,
+          ),
         ),
         if (!isRequired && selectedCode != null)
           Align(

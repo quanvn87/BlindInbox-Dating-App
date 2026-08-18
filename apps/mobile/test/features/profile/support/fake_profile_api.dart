@@ -98,6 +98,13 @@ const testProfileCatalog = ProfileCatalog(
       parentCode: 'D-1',
       isActive: true,
     ),
+    LocationOption(
+      code: 'P-HN',
+      name: 'Ha Noi',
+      level: LocationLevel.province,
+      parentCode: null,
+      isActive: true,
+    ),
   ],
   prompts: [
     ProfilePrompt(
