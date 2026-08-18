@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:slow_dating/app/router.dart';
 import 'package:slow_dating/core/auth/auth_session.dart';
+import 'package:slow_dating/core/auth/auth_session_store.dart';
+import 'package:slow_dating/features/auth/data/auth_api.dart';
+
+import '../features/auth/support/fake_auth_api.dart';
 
 void main() {
   Future<GoRouter> pumpRouter(
@@ -13,7 +18,17 @@ void main() {
     addTearDown(router.dispose);
     addTearDown(session.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authApiProvider.overrideWithValue(FakeAuthApi()),
+          secureStorageAdapterProvider.overrideWithValue(
+            MemorySecureStorageAdapter(),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
     return router;
   }
@@ -25,7 +40,7 @@ void main() {
 
     expect(router.routeInformationProvider.value.uri.path, '/sign-in');
     expect(find.text('Sign in'), findsOneWidget);
-    expect(find.byKey(const ValueKey('sign-in-screen')), findsOneWidget);
+    expect(find.byKey(const ValueKey('phone-screen')), findsOneWidget);
   });
 
   testWidgets('profile-incomplete sessions route to /onboarding', (
