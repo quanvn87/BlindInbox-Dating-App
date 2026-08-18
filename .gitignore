@@ -1,4 +1,5 @@
 .superpowers/
+.worktrees/
 .visual-companion-*.log
 .env
 .env.*
