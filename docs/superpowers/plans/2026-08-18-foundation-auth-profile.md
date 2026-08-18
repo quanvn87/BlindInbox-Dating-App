@@ -148,11 +148,11 @@ Create '.env.example':
 NODE_ENV=development
 PORT=3000
 ORACLE_USER=SLOW_DATING_DEV
-ORACLE_PASSWORD=SlowDatingDev_2026
+ORACLE_PASSWORD=replace-with-your-local-oracle-password
 ORACLE_CONNECT_STRING=localhost:1521/XEPDB1
-JWT_ACCESS_SECRET=local-access-secret-at-least-32-characters
-OTP_PEPPER=local-otp-pepper-at-least-32-characters
-REFRESH_TOKEN_PEPPER=local-refresh-pepper-at-least-32-characters
+JWT_ACCESS_SECRET=replace-with-your-local-jwt-access-secret
+OTP_PEPPER=replace-with-your-local-otp-pepper-value
+REFRESH_TOKEN_PEPPER=replace-with-your-local-refresh-token-pepper
 ~~~
 
 - [ ] **Step 5: Verify and commit**
@@ -183,7 +183,7 @@ git commit -m "feat(api): scaffold health endpoint"
 
 Run: 'npm.cmd install oracledb@6'.
 
-Bootstrap SQL creates 'SLOW_DATING_DEV' and 'SLOW_DATING_TEST' in XEPDB1 with local-only passwords 'SlowDatingDev_2026' and 'SlowDatingTest_2026', plus CREATE SESSION/TABLE/SEQUENCE/VIEW and quota on USERS.
+Bootstrap SQL creates 'SLOW_DATING_DEV' and 'SLOW_DATING_TEST' in XEPDB1, receiving the selected dev/test passwords at invocation through SQL*Plus/SQLcl substitution variables. Developers store selected values only in ignored `.env` files or local environment variables; no fixed Oracle passwords are committed. The bootstrap grants CREATE SESSION/TABLE/SEQUENCE/VIEW and quota on USERS.
 
 - [ ] **Step 2: Write a failing real-Oracle test**
 
@@ -199,7 +199,7 @@ returns exactly one row named '001_auth'.
 
 ~~~powershell
 $env:ORACLE_USER='SLOW_DATING_TEST'
-$env:ORACLE_PASSWORD='SlowDatingTest_2026'
+$env:ORACLE_PASSWORD='<your-local-test-oracle-password>'
 $env:ORACLE_CONNECT_STRING='localhost:1521/XEPDB1'
 npm.cmd test -- oracle.integration-spec.ts --runInBand
 ~~~
