@@ -118,86 +118,14 @@ export class OracleProfileRepository implements ProfileRepository {
   }
 
   findByUserId(userId: string): Promise<ProfileInput | null> {
-    return this.oracleService.withConnection(async (connection) => {
-      const scalarResult = await connection.execute<ProfileRow>(
-        `SELECT display_name,
-                TO_CHAR(birth_date, 'YYYY-MM-DD') AS birth_date,
-                gender_identity_code, gender_label, height_cm,
-                hometown_location_code, home_location_code, bio,
-                favorite_song_title, favorite_song_artist
-         FROM profiles
-         WHERE user_id = :userId`,
-        { userId },
-        {
-          outFormat: oracledb.OUT_FORMAT_OBJECT,
-          fetchInfo: {
-            BIO: { type: oracledb.STRING },
-            FAVORITE_SONG_TITLE: { type: oracledb.STRING },
-            FAVORITE_SONG_ARTIST: { type: oracledb.STRING },
-          },
-        },
-      );
-      const scalar = scalarResult.rows?.[0];
-      if (!scalar) {
-        return null;
-      }
-
-      const interestedGenders = await connection.execute<CodeRow>(
-        `SELECT interests.gender_code AS code
-         FROM profile_interested_genders interests
-         JOIN gender_catalog catalog ON catalog.code = interests.gender_code
-         WHERE interests.user_id = :userId
-         ORDER BY catalog.sort_order`,
-        { userId },
-        { outFormat: oracledb.OUT_FORMAT_OBJECT },
-      );
-      const connectionIntents = await connection.execute<CodeRow>(
-        `SELECT selections.intent_code AS code
-         FROM profile_connection_intents selections
-         JOIN connection_intent_catalog catalog
-           ON catalog.code = selections.intent_code
-         WHERE selections.user_id = :userId
-         ORDER BY catalog.sort_order`,
-        { userId },
-        { outFormat: oracledb.OUT_FORMAT_OBJECT },
-      );
-      const promptAnswers = await connection.execute<PromptAnswerRow>(
-        `SELECT answers.prompt_code, answers.answer
-         FROM profile_prompt_answers answers
-         JOIN profile_prompts prompts ON prompts.code = answers.prompt_code
-         WHERE answers.user_id = :userId
-         ORDER BY prompts.sort_order`,
-        { userId },
-        { outFormat: oracledb.OUT_FORMAT_OBJECT },
-      );
-
-      return {
-        displayName: scalar.DISPLAY_NAME,
-        birthDate: scalar.BIRTH_DATE,
-        genderIdentity: scalar.GENDER_IDENTITY_CODE,
-        genderLabel: scalar.GENDER_LABEL,
-        interestedInGenders: (interestedGenders.rows ?? []).map(
-          ({ CODE }) => CODE as GenderCode,
-        ),
-        connectionIntents: (connectionIntents.rows ?? []).map(
-          ({ CODE }) => CODE as ConnectionIntent,
-        ),
-        heightCm: scalar.HEIGHT_CM,
-        hometownLocationCode: scalar.HOMETOWN_LOCATION_CODE,
-        homeLocationCode: scalar.HOME_LOCATION_CODE,
-        bio: scalar.BIO ?? '',
-        favoriteSongTitle: scalar.FAVORITE_SONG_TITLE,
-        favoriteSongArtist: scalar.FAVORITE_SONG_ARTIST,
-        promptAnswers: (promptAnswers.rows ?? []).map((row) => ({
-          promptCode: row.PROMPT_CODE,
-          answer: row.ANSWER,
-        })),
-      };
+    return this.oracleService.withTransaction(async (connection) => {
+      await connection.execute('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+      return this.readByUserId(connection, userId);
     });
   }
 
   async upsert(userId: string, input: ProfileInput): Promise<ProfileInput> {
-    await this.oracleService.withTransaction(async (connection) => {
+    return this.oracleService.withTransaction(async (connection) => {
       await this.upsertScalar(connection, userId, input);
       await connection.execute(
         'DELETE FROM profile_interested_genders WHERE user_id = :userId',
@@ -233,9 +161,93 @@ export class OracleProfileRepository implements ProfileRepository {
           { userId, promptCode: answer.promptCode, answer: answer.answer },
         );
       }
-    });
 
-    return input;
+      const stored = await this.readByUserId(connection, userId);
+      if (!stored) {
+        throw new Error('Profile missing after upsert');
+      }
+      return stored;
+    });
+  }
+
+  private async readByUserId(
+    connection: Connection,
+    userId: string,
+  ): Promise<ProfileInput | null> {
+    const scalarResult = await connection.execute<ProfileRow>(
+      `SELECT display_name,
+                TO_CHAR(birth_date, 'YYYY-MM-DD') AS birth_date,
+                gender_identity_code, gender_label, height_cm,
+                hometown_location_code, home_location_code, bio,
+                favorite_song_title, favorite_song_artist
+         FROM profiles
+         WHERE user_id = :userId`,
+      { userId },
+      {
+        outFormat: oracledb.OUT_FORMAT_OBJECT,
+        fetchInfo: {
+          BIO: { type: oracledb.STRING },
+          FAVORITE_SONG_TITLE: { type: oracledb.STRING },
+          FAVORITE_SONG_ARTIST: { type: oracledb.STRING },
+        },
+      },
+    );
+    const scalar = scalarResult.rows?.[0];
+    if (!scalar) {
+      return null;
+    }
+
+    const interestedGenders = await connection.execute<CodeRow>(
+      `SELECT interests.gender_code AS code
+         FROM profile_interested_genders interests
+         JOIN gender_catalog catalog ON catalog.code = interests.gender_code
+         WHERE interests.user_id = :userId
+         ORDER BY catalog.sort_order`,
+      { userId },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+    const connectionIntents = await connection.execute<CodeRow>(
+      `SELECT selections.intent_code AS code
+         FROM profile_connection_intents selections
+         JOIN connection_intent_catalog catalog
+           ON catalog.code = selections.intent_code
+         WHERE selections.user_id = :userId
+         ORDER BY catalog.sort_order`,
+      { userId },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+    const promptAnswers = await connection.execute<PromptAnswerRow>(
+      `SELECT answers.prompt_code, answers.answer
+         FROM profile_prompt_answers answers
+         JOIN profile_prompts prompts ON prompts.code = answers.prompt_code
+         WHERE answers.user_id = :userId
+         ORDER BY prompts.sort_order`,
+      { userId },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    return {
+      displayName: scalar.DISPLAY_NAME,
+      birthDate: scalar.BIRTH_DATE,
+      genderIdentity: scalar.GENDER_IDENTITY_CODE,
+      genderLabel: scalar.GENDER_LABEL,
+      interestedInGenders: (interestedGenders.rows ?? []).map(
+        ({ CODE }) => CODE as GenderCode,
+      ),
+      connectionIntents: (connectionIntents.rows ?? []).map(
+        ({ CODE }) => CODE as ConnectionIntent,
+      ),
+      heightCm: scalar.HEIGHT_CM,
+      hometownLocationCode: scalar.HOMETOWN_LOCATION_CODE,
+      homeLocationCode: scalar.HOME_LOCATION_CODE,
+      bio: scalar.BIO ?? '',
+      favoriteSongTitle: scalar.FAVORITE_SONG_TITLE,
+      favoriteSongArtist: scalar.FAVORITE_SONG_ARTIST,
+      promptAnswers: (promptAnswers.rows ?? []).map((row) => ({
+        promptCode: row.PROMPT_CODE,
+        answer: row.ANSWER,
+      })),
+    };
   }
 
   private async upsertScalar(

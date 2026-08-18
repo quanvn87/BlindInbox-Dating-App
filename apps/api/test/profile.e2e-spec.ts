@@ -180,6 +180,42 @@ describe('Profile API (e2e)', () => {
     await expectIdentityStatus(userId, 'NOT_STARTED');
   });
 
+  it('returns the canonical persisted order for reversed multi-value input', async () => {
+    const authorization = await createAuthorization();
+    const reversedInput = validProfile({
+      interestedInGenders: ['WOMAN', 'MAN'],
+      connectionIntents: ['FRIENDSHIP', 'CASUAL_CONVERSATION'],
+      promptAnswers: [
+        { promptCode: 'SOMETHING_I_VALUE', answer: 'Kindness' },
+        { promptCode: 'RECENT_JOY', answer: 'A quiet morning' },
+        { promptCode: 'IDEAL_SUNDAY', answer: 'Coffee and a long walk' },
+      ],
+    });
+    const canonical = {
+      ...reversedInput,
+      interestedInGenders: ['MAN', 'WOMAN'],
+      connectionIntents: ['CASUAL_CONVERSATION', 'FRIENDSHIP'],
+      promptAnswers: [
+        { promptCode: 'IDEAL_SUNDAY', answer: 'Coffee and a long walk' },
+        { promptCode: 'RECENT_JOY', answer: 'A quiet morning' },
+        { promptCode: 'SOMETHING_I_VALUE', answer: 'Kindness' },
+      ],
+    } satisfies ProfileInput;
+
+    await request(app.getHttpServer())
+      .put('/v1/me/profile')
+      .set('Authorization', authorization)
+      .set('Idempotency-Key', randomUUID())
+      .send(reversedInput)
+      .expect(200)
+      .expect(canonical);
+    await request(app.getHttpServer())
+      .get('/v1/me/profile')
+      .set('Authorization', authorization)
+      .expect(200)
+      .expect(canonical);
+  });
+
   function validProfile(overrides: Partial<ProfileInput> = {}): ProfileInput {
     return {
       displayName: 'Minh Anh',
