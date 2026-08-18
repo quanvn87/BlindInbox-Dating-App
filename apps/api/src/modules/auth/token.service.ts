@@ -1,4 +1,9 @@
-import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+import {
+  createHmac,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 
 import type { AuthRepository } from './auth.repository';
 import {
@@ -15,6 +20,14 @@ type IdGenerator = () => string;
 interface TokenMaterial {
   refreshToken: string;
   session: RefreshSession;
+}
+
+export interface AccessTokenClaims {
+  sub: string;
+  sessionId: string;
+  status: AuthUser['status'];
+  iat: number;
+  exp: number;
 }
 
 export class TokenService {
@@ -75,6 +88,50 @@ export class TokenService {
     );
   }
 
+  verifyAccessToken(token: string): AccessTokenClaims {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3 || parts.some((part) => part.length === 0)) {
+        throw new Error('Malformed access token');
+      }
+
+      const [encodedHeader, encodedPayload, encodedSignature] = parts;
+      const header = this.decodeJwtPart<unknown>(encodedHeader);
+      if (
+        !this.isRecord(header) ||
+        header.alg !== 'HS256' ||
+        header.typ !== 'JWT'
+      ) {
+        throw new Error('Unsupported access token');
+      }
+
+      const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+      const expectedSignature = createHmac('sha256', this.jwtAccessSecret)
+        .update(unsignedToken)
+        .digest();
+      const suppliedSignature = Buffer.from(encodedSignature, 'base64url');
+      if (
+        suppliedSignature.length !== expectedSignature.length ||
+        !timingSafeEqual(suppliedSignature, expectedSignature)
+      ) {
+        throw new Error('Invalid access token signature');
+      }
+
+      const payload = this.decodeJwtPart<unknown>(encodedPayload);
+      if (!this.isAccessTokenClaims(payload)) {
+        throw new Error('Invalid access token claims');
+      }
+      const nowSeconds = Math.floor(this.clock.now().getTime() / 1000);
+      if (payload.exp <= nowSeconds || payload.exp <= payload.iat) {
+        throw new Error('Expired access token');
+      }
+
+      return payload;
+    } catch {
+      throw new Error('Invalid access token');
+    }
+  }
+
   private createRefreshTokenMaterial(
     userId: string,
     deviceName: string,
@@ -132,5 +189,26 @@ export class TokenService {
     return createHmac('sha256', this.refreshTokenPepper)
       .update(token)
       .digest('hex');
+  }
+
+  private decodeJwtPart<T>(part: string): T {
+    return JSON.parse(Buffer.from(part, 'base64url').toString('utf8')) as T;
+  }
+
+  private isAccessTokenClaims(value: unknown): value is AccessTokenClaims {
+    return (
+      this.isRecord(value) &&
+      typeof value.sub === 'string' &&
+      value.sub.length > 0 &&
+      typeof value.sessionId === 'string' &&
+      value.sessionId.length > 0 &&
+      ['ACTIVE', 'SUSPENDED', 'DELETED'].includes(String(value.status)) &&
+      Number.isInteger(value.iat) &&
+      Number.isInteger(value.exp)
+    );
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 }

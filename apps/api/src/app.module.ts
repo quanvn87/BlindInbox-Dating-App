@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { envSchema } from './common/config/env.schema';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { ProfileModule } from './modules/profile/profile.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { HealthModule } from './modules/health/health.module';
     }),
     AuthModule,
     HealthModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
