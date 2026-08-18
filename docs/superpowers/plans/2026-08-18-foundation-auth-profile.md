@@ -198,11 +198,13 @@ returns exactly one row named '001_auth'.
 - [ ] **Step 3: Run test before implementation**
 
 ~~~powershell
-$env:ORACLE_USER='SLOW_DATING_TEST'
-$env:ORACLE_PASSWORD='<your-local-test-oracle-password>'
+$env:ORACLE_TEST_USER='SLOW_DATING_TEST'
+$env:ORACLE_TEST_PASSWORD='<your-local-test-oracle-password>'
 $env:ORACLE_CONNECT_STRING='localhost:1521/XEPDB1'
 npm.cmd test -- oracle.integration-spec.ts --runInBand
 ~~~
+
+Test setup maps only these explicit TEST aliases to runtime Oracle credentials and rejects missing aliases, preventing DEV fallback.
 
 Expected: FAIL because service/table is missing.
 
