@@ -208,20 +208,6 @@ describe('ProfileService', () => {
       { favoriteSongTitle: null, favoriteSongArtist: 'Lam Trường' },
     ],
     [
-      'favoriteSongTitle',
-      {
-        favoriteSongTitle: 'x'.repeat(501),
-        favoriteSongArtist: 'Lam Trường',
-      },
-    ],
-    [
-      'favoriteSongArtist',
-      {
-        favoriteSongTitle: 'Tình thôi xót xa',
-        favoriteSongArtist: 'x'.repeat(501),
-      },
-    ],
-    [
       'promptAnswers',
       { promptAnswers: [{ promptCode: 'IDEAL_SUNDAY', answer: '' }] },
     ],
@@ -239,6 +225,24 @@ describe('ProfileService', () => {
     await expect(
       service.upsert('user-1', validInput(overrides)),
     ).rejects.toMatchObject({ code: 'PROFILE_INVALID', field });
+  });
+
+  it('accepts paired song values longer than 500 characters', async () => {
+    const { service } = createHarness();
+    const longSongValue = 'x'.repeat(600);
+
+    await expect(
+      service.upsert(
+        'user-1',
+        validInput({
+          favoriteSongTitle: longSongValue,
+          favoriteSongArtist: longSongValue,
+        }),
+      ),
+    ).resolves.toMatchObject({
+      favoriteSongTitle: longSongValue,
+      favoriteSongArtist: longSongValue,
+    });
   });
 
   it('rejects a SELF_DESCRIBED label whose stored value exceeds 50 characters', async () => {

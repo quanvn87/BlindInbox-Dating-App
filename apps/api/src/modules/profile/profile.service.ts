@@ -14,7 +14,6 @@ import type {
 } from './profile.types';
 
 const MINIMUM_AGE = 18;
-const MAXIMUM_SONG_FIELD_LENGTH = 500;
 
 export class ProfileService {
   constructor(
@@ -146,18 +145,6 @@ export class ProfileService {
   }
 
   private validateSongs(input: ProfileInput): void {
-    if (
-      input.favoriteSongTitle !== null &&
-      input.favoriteSongTitle.length > MAXIMUM_SONG_FIELD_LENGTH
-    ) {
-      this.invalid('favoriteSongTitle');
-    }
-    if (
-      input.favoriteSongArtist !== null &&
-      input.favoriteSongArtist.length > MAXIMUM_SONG_FIELD_LENGTH
-    ) {
-      this.invalid('favoriteSongArtist');
-    }
     const titlePresent =
       input.favoriteSongTitle !== null &&
       input.favoriteSongTitle.trim().length > 0;
