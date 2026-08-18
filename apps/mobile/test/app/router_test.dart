@@ -6,8 +6,10 @@ import 'package:slow_dating/app/router.dart';
 import 'package:slow_dating/core/auth/auth_session.dart';
 import 'package:slow_dating/core/auth/auth_session_store.dart';
 import 'package:slow_dating/features/auth/data/auth_api.dart';
+import 'package:slow_dating/features/profile/data/profile_api.dart';
 
 import '../features/auth/support/fake_auth_api.dart';
+import '../features/profile/support/fake_profile_api.dart';
 
 void main() {
   Future<GoRouter> pumpRouter(
@@ -22,6 +24,7 @@ void main() {
       ProviderScope(
         overrides: [
           authApiProvider.overrideWithValue(FakeAuthApi()),
+          profileApiProvider.overrideWithValue(FakeProfileApi()),
           secureStorageAdapterProvider.overrideWithValue(
             MemorySecureStorageAdapter(),
           ),

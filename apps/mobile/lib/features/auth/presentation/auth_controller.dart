@@ -6,6 +6,7 @@ import 'package:slow_dating/core/auth/auth_session.dart';
 import 'package:slow_dating/core/auth/auth_session_store.dart';
 import 'package:slow_dating/features/auth/data/auth_api.dart';
 import 'package:slow_dating/features/auth/domain/auth_state.dart';
+import 'package:slow_dating/features/profile/data/profile_api.dart';
 
 typedef AuthClock = DateTime Function();
 typedef AuthIdGenerator = String Function();
@@ -40,6 +41,7 @@ final class AuthController extends StateNotifier<AuthState> {
     required AuthApi api,
     required AuthSessionStore sessionStore,
     required AuthSessionController sessionController,
+    required ProfileApi profileApi,
     AuthClock? clock,
     AuthTicker? ticker,
     AuthIdGenerator? generateId,
@@ -48,6 +50,7 @@ final class AuthController extends StateNotifier<AuthState> {
     api: api,
     sessionStore: sessionStore,
     sessionController: sessionController,
+    profileApi: profileApi,
     clock: clock ?? DateTime.now,
     ticker: ticker ?? TimerAuthTicker(),
     generateId: generateId ?? generateAuthCommandId,
@@ -58,6 +61,7 @@ final class AuthController extends StateNotifier<AuthState> {
     required this._api,
     required this._sessionStore,
     required this._sessionController,
+    required this._profileApi,
     required this._clock,
     required this._ticker,
     required this._generateId,
@@ -67,6 +71,7 @@ final class AuthController extends StateNotifier<AuthState> {
   final AuthApi _api;
   final AuthSessionStore _sessionStore;
   final AuthSessionController _sessionController;
+  final ProfileApi _profileApi;
   final AuthClock _clock;
   final AuthTicker _ticker;
   final AuthIdGenerator _generateId;
@@ -252,9 +257,15 @@ final class AuthController extends StateNotifier<AuthState> {
       if (_disposed) {
         return false;
       }
+      final profile = await _profileApi.getProfile(
+        accessToken: tokens.accessToken,
+      );
+      if (_disposed) {
+        return false;
+      }
       _sessionController.authenticate(
         accessToken: tokens.accessToken,
-        isProfileComplete: false,
+        isProfileComplete: profile != null,
       );
       state = state.copyWith(operation: AuthOperation.idle);
       return true;
@@ -262,6 +273,9 @@ final class AuthController extends StateNotifier<AuthState> {
       if (error.kind == AuthApiFailure.invalidRefresh) {
         await _clearPersistedRefreshToken();
       }
+      _finishRestoreFailure(errorMessage: error.userMessage);
+      return false;
+    } on ProfileApiException catch (error) {
       _finishRestoreFailure(errorMessage: error.userMessage);
       return false;
     } on Object {
@@ -351,6 +365,7 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
       api: ref.watch(authApiProvider),
       sessionStore: ref.watch(authSessionStoreProvider),
       sessionController: ref.read(authSessionControllerProvider),
+      profileApi: ref.watch(profileApiProvider),
     );
     controller.restoreSession().ignore();
     return controller;

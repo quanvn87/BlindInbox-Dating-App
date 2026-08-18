@@ -5,8 +5,10 @@ import 'package:slow_dating/core/auth/auth_session.dart';
 import 'package:slow_dating/core/auth/auth_session_store.dart';
 import 'package:slow_dating/features/auth/data/auth_api.dart';
 import 'package:slow_dating/features/auth/presentation/auth_controller.dart';
+import 'package:slow_dating/features/profile/data/profile_api.dart';
 
 import 'support/fake_auth_api.dart';
+import '../profile/support/fake_profile_api.dart';
 
 void main() {
   late DateTime now;
@@ -14,6 +16,7 @@ void main() {
   late MemorySecureStorageAdapter storage;
   late AuthSessionStore store;
   late AuthSessionController session;
+  late FakeProfileApi profileApi;
   late ManualAuthTicker ticker;
   late SequenceIdGenerator ids;
   late AuthController controller;
@@ -26,6 +29,7 @@ void main() {
     storage = MemorySecureStorageAdapter();
     store = AuthSessionStore(storage);
     session = AuthSessionController();
+    profileApi = FakeProfileApi();
     ticker = ManualAuthTicker();
     ids = SequenceIdGenerator();
     controllerDisposed = false;
@@ -34,6 +38,7 @@ void main() {
       api: api,
       sessionStore: store,
       sessionController: session,
+      profileApi: profileApi,
       clock: () => now,
       ticker: ticker,
       generateId: ids.call,
@@ -179,6 +184,50 @@ void main() {
     expect(await store.readRefreshToken(), api.tokens.refreshToken);
     expect(session.value.accessToken, api.tokens.accessToken);
     expect(session.value.isProfileComplete, isFalse);
+    expect(profileApi.profileReads, [api.tokens.accessToken]);
+  });
+
+  test(
+    'returning session with an existing profile routes as complete',
+    () async {
+      await store.saveRefreshToken('stored-refresh-token');
+      profileApi.currentProfile = completeProfileInput;
+
+      final restored = await controller.restoreSession();
+
+      expect(restored, isTrue);
+      expect(session.value.accessToken, api.tokens.accessToken);
+      expect(session.value.isProfileComplete, isTrue);
+      expect(profileApi.profileReads, [api.tokens.accessToken]);
+    },
+  );
+
+  test('returning session with a 404 profile routes to onboarding', () async {
+    await store.saveRefreshToken('stored-refresh-token');
+    profileApi.currentProfile = null;
+
+    final restored = await controller.restoreSession();
+
+    expect(restored, isTrue);
+    expect(session.value.isProfileComplete, isFalse);
+    expect(profileApi.profileReads, [api.tokens.accessToken]);
+  });
+
+  test('profile resolution failure does not expose server details', () async {
+    await store.saveRefreshToken('stored-refresh-token');
+    profileApi.getFailure = const ProfileApiException(
+      ProfileApiFailure.network,
+      'Unable to resolve your profile. Check your connection and try again.',
+    );
+
+    final restored = await controller.restoreSession();
+
+    expect(restored, isFalse);
+    expect(session.value.isAuthenticated, isFalse);
+    expect(
+      controller.state.errorMessage,
+      'Unable to resolve your profile. Check your connection and try again.',
+    );
   });
 
   test('invalid refresh clears persisted and memory session', () async {

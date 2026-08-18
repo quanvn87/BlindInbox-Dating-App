@@ -8,8 +8,10 @@ import 'package:slow_dating/app/app.dart';
 import 'package:slow_dating/core/auth/auth_session_store.dart';
 import 'package:slow_dating/features/auth/data/auth_api.dart';
 import 'package:slow_dating/features/auth/presentation/otp_screen.dart';
+import 'package:slow_dating/features/profile/data/profile_api.dart';
 
 import 'support/fake_auth_api.dart';
+import '../profile/support/fake_profile_api.dart';
 
 void main() {
   testWidgets('phone and captured OTP flow routes to onboarding', (
@@ -23,6 +25,7 @@ void main() {
       ProviderScope(
         overrides: [
           authApiProvider.overrideWithValue(api),
+          profileApiProvider.overrideWithValue(FakeProfileApi()),
           secureStorageAdapterProvider.overrideWithValue(storage),
         ],
         child: const SlowDatingApp(),
@@ -77,6 +80,7 @@ void main() {
       ProviderScope(
         overrides: [
           authApiProvider.overrideWithValue(api),
+          profileApiProvider.overrideWithValue(FakeProfileApi()),
           secureStorageAdapterProvider.overrideWithValue(
             MemorySecureStorageAdapter(),
           ),

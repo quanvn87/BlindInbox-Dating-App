@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:slow_dating/core/auth/auth_session.dart';
 import 'package:slow_dating/features/auth/presentation/otp_screen.dart';
 import 'package:slow_dating/features/auth/presentation/phone_screen.dart';
+import 'package:slow_dating/features/profile/presentation/profile_onboarding_screen.dart';
 
 GoRouter createAppRouter(AuthSessionController session) {
   return GoRouter(
@@ -34,10 +35,7 @@ GoRouter createAppRouter(AuthSessionController session) {
       ),
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const _PlaceholderScreen(
-          key: ValueKey('onboarding-screen'),
-          label: 'Complete your profile',
-        ),
+        builder: (context, state) => const ProfileOnboardingScreen(),
       ),
       GoRoute(
         path: '/home',
