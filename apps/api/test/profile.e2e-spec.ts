@@ -149,6 +149,28 @@ describe('Profile API (e2e)', () => {
       .expect(400);
   });
 
+  it('rejects a year-zero birth date as safe profile validation', async () => {
+    const authorization = await createAuthorization();
+
+    await request(app.getHttpServer())
+      .put('/v1/me/profile')
+      .set('Authorization', authorization)
+      .set('Idempotency-Key', randomUUID())
+      .send(validProfile({ birthDate: '0000-01-01' }))
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          code: 'PROFILE_INVALID',
+          field: 'birthDate',
+        });
+      });
+
+    await request(app.getHttpServer())
+      .get('/v1/me/profile')
+      .set('Authorization', authorization)
+      .expect(404);
+  });
+
   it('persists an inclusive MAN-to-MAN friendship profile idempotently', async () => {
     const { authorization, userId } = await createAuthorizationWithUser();
     const profile = validProfile({

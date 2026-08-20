@@ -62,8 +62,9 @@ export class ProfileInput implements ProfileInputContract {
 
   @ApiProperty({
     format: 'date',
+    pattern: '^(?!0000)\\d{4}-\\d{2}-\\d{2}$',
     description:
-      'UTC calendar date (YYYY-MM-DD); the server requires age >=18 using the UTC calendar date.',
+      'UTC calendar date (YYYY-MM-DD) with a positive year; the server requires age >=18 using the UTC calendar date.',
   })
   birthDate!: string;
 
@@ -123,7 +124,7 @@ export class ProfileInput implements ProfileInputContract {
     nullable: true,
     minLength: 1,
     description:
-      'When present, must be a nonblank active catalog location code.',
+      'When present, must be nonblank and match a currently active PROVINCE-level location code returned by GET /v1/catalog/profile-options. The live catalog is checked; this is not a static enum.',
   })
   hometownLocationCode!: string | null;
 

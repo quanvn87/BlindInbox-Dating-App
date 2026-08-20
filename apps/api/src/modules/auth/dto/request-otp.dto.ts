@@ -9,7 +9,13 @@ const requestOtpSchema = z
   .strict();
 
 export class RequestOtpDto {
-  @ApiProperty({ example: '+84901234567', maxLength: 50 })
+  @ApiProperty({
+    example: '+84901234567',
+    minLength: 1,
+    maxLength: 50,
+    description:
+      'Must be nonblank after trimming and parse as a valid Vietnamese phone number without an extension. National or E.164 input is accepted and normalized to Vietnamese E.164 before use.',
+  })
   phone!: string;
 
   static parse(input: unknown): RequestOtpDto {

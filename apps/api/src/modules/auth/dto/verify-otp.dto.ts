@@ -11,13 +11,23 @@ const verifyOtpSchema = z
   .strict();
 
 export class VerifyOtpDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({
+    format: 'uuid',
+    description: 'OTP challenge identifier returned by the request endpoint.',
+  })
   challengeId!: string;
 
-  @ApiProperty({ pattern: '^\\d{6}$' })
+  @ApiProperty({
+    pattern: '^\\d{6}$',
+    description: 'Exactly six ASCII digits; whitespace is not trimmed.',
+  })
   code!: string;
 
-  @ApiProperty({ maxLength: 120 })
+  @ApiProperty({
+    minLength: 1,
+    maxLength: 120,
+    description: 'Must be nonblank after trimming.',
+  })
   deviceName!: string;
 
   static parse(input: unknown): VerifyOtpDto {

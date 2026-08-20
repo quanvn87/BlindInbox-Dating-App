@@ -108,6 +108,9 @@ export class ProfileService {
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
+    if (year <= 0) {
+      return null;
+    }
     const date = new Date(0);
     date.setUTCHours(0, 0, 0, 0);
     date.setUTCFullYear(year, month - 1, day);

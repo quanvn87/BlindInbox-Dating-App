@@ -4,8 +4,13 @@ import type {
   ReferenceObject,
   SchemaObject,
 } from '@nestjs/swagger';
+import { readFile } from 'node:fs/promises';
 
-import { createOpenApiDocument, serializeOpenApiDocument } from './openapi';
+import {
+  createOpenApiDocument,
+  OPENAPI_OUTPUT_PATH,
+  serializeOpenApiDocument,
+} from './openapi';
 
 describe('OpenAPI contract', () => {
   let document: OpenAPIObject;
@@ -122,6 +127,48 @@ describe('OpenAPI contract', () => {
     expect(profile.required).toHaveLength(13);
   });
 
+  it('documents auth input normalization and opaque-token semantics', () => {
+    const requestOtp = schema(document, 'RequestOtpDto');
+    expect(requestOtp.properties?.phone).toMatchObject({
+      type: 'string',
+      minLength: 1,
+      maxLength: 50,
+    });
+    expect(requestOtp.properties?.phone?.description).toMatch(
+      /nonblank.*trimming.*Vietnamese.*E\.164.*normalized/i,
+    );
+
+    const verifyOtp = schema(document, 'VerifyOtpDto');
+    expect(verifyOtp.properties?.challengeId).toMatchObject({
+      type: 'string',
+      format: 'uuid',
+    });
+    expect(verifyOtp.properties?.code).toMatchObject({
+      type: 'string',
+      pattern: '^\\d{6}$',
+    });
+    expect(verifyOtp.properties?.deviceName).toMatchObject({
+      type: 'string',
+      minLength: 1,
+      maxLength: 120,
+    });
+    expect(verifyOtp.properties?.deviceName?.description).toMatch(
+      /nonblank.*trimming/i,
+    );
+
+    for (const componentName of ['RefreshTokenDto', 'LogoutDto']) {
+      const tokenRequest = schema(document, componentName);
+      expect(tokenRequest.properties?.refreshToken).toMatchObject({
+        type: 'string',
+        minLength: 1,
+        maxLength: 2048,
+      });
+      expect(tokenRequest.properties?.refreshToken?.description).toMatch(
+        /non-empty.*opaque.*neither trimmed nor normalized/i,
+      );
+    }
+  });
+
   it('keeps the stable AuthTokens and ProfileInput component schemas', () => {
     const authTokens = schema(document, 'AuthTokens');
     expect(authTokens).toMatchObject({
@@ -201,6 +248,7 @@ describe('OpenAPI contract', () => {
     expect(properties?.birthDate).toMatchObject({
       type: 'string',
       format: 'date',
+      pattern: '^(?!0000)\\d{4}-\\d{2}-\\d{2}$',
     });
     expect(properties?.birthDate?.description).toMatch(/18.*UTC/);
     expect(properties?.genderLabel).toMatchObject({
@@ -262,8 +310,9 @@ describe('OpenAPI contract', () => {
       minLength: 1,
     });
     expect(properties?.hometownLocationCode?.description).toMatch(
-      /nonblank.*active.*location/i,
+      /nonblank.*currently active.*PROVINCE.*GET \/v1\/catalog\/profile-options.*not.*static enum/i,
     );
+    expect(properties?.hometownLocationCode).not.toHaveProperty('enum');
 
     expect(properties?.favoriteSongTitle).toMatchObject({
       type: 'string',
@@ -321,6 +370,12 @@ describe('OpenAPI contract', () => {
     expect(first.endsWith('\n')).toBe(true);
     expect(first.indexOf('"components"')).toBeLessThan(
       first.indexOf('"openapi"'),
+    );
+  });
+
+  it('matches the checked-in generated OpenAPI artifact', async () => {
+    await expect(readFile(OPENAPI_OUTPUT_PATH, 'utf8')).resolves.toBe(
+      serializeOpenApiDocument(document),
     );
   });
 

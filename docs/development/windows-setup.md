@@ -141,6 +141,92 @@ Set-Location .\apps\mobile
 flutter test
 ```
 
+## Record the Plan 1 exit gate as the owning Windows account
+
+The final exit gate must be run after the candidate commit by the Windows account that owns the Flutter SDK and Git worktree. Run these commands from that account; do not substitute results from a different user context:
+
+```powershell
+$repositoryRoot = git rev-parse --show-toplevel
+Set-Location $repositoryRoot
+flutter doctor -v
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check.ps1
+git status --short
+```
+
+`flutter doctor -v` and `check.ps1` must exit successfully, and `git status --short` must print nothing. Keep the complete command output as the automated gate evidence, but remove local paths or identifiers before sharing it. The check script includes the guarded DEV migration, API lint/build/unit/integration/e2e/OpenAPI drift, Flutter format/analyze/tests, and the Android debug build. Run the two explicit `migrate:dev` commands in the earlier migration section to record the required second-run no-op separately.
+
+The emulator evidence is separate and cannot be replaced by widget tests. Keep the API running in Terminal 1:
+
+```powershell
+$repositoryRoot = git rev-parse --show-toplevel
+Set-Location $repositoryRoot
+npm.cmd --prefix .\apps\api run start:dev
+```
+
+In Terminal 2, launch the already-created Android emulator and install the app against the real local DEV API:
+
+```powershell
+$repositoryRoot = git rev-parse --show-toplevel
+Set-Location $repositoryRoot
+flutter devices
+Set-Location .\apps\mobile
+flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000/v1
+```
+
+Use two distinct Vietnamese development phone numbers that the owner is authorized to use; do not put either number or either OTP in the evidence. For account A, read its development OTP only from Terminal 1, complete a profile with an adult birth date, and confirm the app reaches Home. Quit `flutter run`, then force-stop and relaunch the installed process:
+
+```powershell
+adb.exe -s emulator-5554 shell am force-stop com.quan.slow_dating
+adb.exe -s emulator-5554 shell monkey -p com.quan.slow_dating -c android.intent.category.LAUNCHER 1
+```
+
+Confirm account A returns to Home without entering another OTP. This exercises secure refresh-token restoration, refresh rotation, and the authenticated profile fetch. Then clear only this DEV app's local data, relaunch it, and repeat the sign-in/profile/restart check with distinct account B:
+
+```powershell
+# Destructive only to the emulator's com.quan.slow_dating application data.
+adb.exe -s emulator-5554 shell pm clear com.quan.slow_dating
+adb.exe -s emulator-5554 shell monkey -p com.quan.slow_dating -c android.intent.category.LAUNCHER 1
+```
+
+After account B also returns to Home following the same force-stop/relaunch commands, inspect aggregate DEV state without printing phone numbers, tokens, OTPs, or profile text. SQL*Plus prompts interactively for the local DEV password; do not place it on the command line:
+
+```powershell
+sqlplus.exe SLOW_DATING_DEV@localhost:1521/XEPDB1
+```
+
+Run this query inside SQL*Plus:
+
+```sql
+WITH smoke_profiles AS (
+  SELECT p.user_id, p.birth_date
+  FROM profiles p
+  ORDER BY p.updated_at DESC
+  FETCH FIRST 2 ROWS ONLY
+)
+SELECT
+  COUNT(*) AS profile_count,
+  SUM(CASE
+        WHEN sp.birth_date <= ADD_MONTHS(
+          TRUNC(CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) AS DATE)), -216
+        ) THEN 1 ELSE 0
+      END) AS adult_profile_count,
+  SUM(CASE WHEN u.identity_status = 'NOT_STARTED' THEN 1 ELSE 0 END)
+    AS kyc_not_started_count,
+  SUM((SELECT COUNT(*) FROM refresh_sessions rs
+       WHERE rs.user_id = sp.user_id)) AS total_session_count,
+  SUM((SELECT COUNT(*) FROM refresh_sessions rs
+       WHERE rs.user_id = sp.user_id
+         AND rs.revoked_at IS NOT NULL)) AS revoked_session_count,
+  SUM((SELECT COUNT(*) FROM refresh_sessions rs
+       WHERE rs.user_id = sp.user_id
+         AND rs.revoked_at IS NULL
+         AND rs.expires_at > SYSTIMESTAMP)) AS active_session_count
+FROM smoke_profiles sp
+JOIN app_users u ON u.id = sp.user_id;
+```
+
+For two newly completed and restarted accounts, record `PROFILE_COUNT=2`, `ADULT_PROFILE_COUNT=2`, `KYC_NOT_STARTED_COUNT=2`, `ACTIVE_SESSION_COUNT=2`, `TOTAL_SESSION_COUNT>=4`, and `REVOKED_SESSION_COUNT>=2`. Larger total/revoked counts are valid after extra restarts. Do not claim the exit gate from source review alone; record the actual owner-run outputs and emulator observations after the final commit.
+
 ## Service boundary note
 
 Oracle XE is the only datastore required by this slice. MongoDB and MinIO are planned for later chat/media work and should eventually run as separately configured Docker services. Do not add or start them for foundation/auth/profile development.

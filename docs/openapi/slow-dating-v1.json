@@ -118,7 +118,9 @@
         "additionalProperties": false,
         "properties": {
           "refreshToken": {
+            "description": "Must be a non-empty opaque token. It is used exactly as supplied and is neither trimmed nor normalized.",
             "maxLength": 2048,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -189,8 +191,9 @@
             "type": "string"
           },
           "birthDate": {
-            "description": "UTC calendar date (YYYY-MM-DD); the server requires age >=18 using the UTC calendar date.",
+            "description": "UTC calendar date (YYYY-MM-DD) with a positive year; the server requires age >=18 using the UTC calendar date.",
             "format": "date",
+            "pattern": "^(?!0000)\\d{4}-\\d{2}-\\d{2}$",
             "type": "string"
           },
           "connectionIntents": {
@@ -254,7 +257,7 @@
             "type": "string"
           },
           "hometownLocationCode": {
-            "description": "When present, must be a nonblank active catalog location code.",
+            "description": "When present, must be nonblank and match a currently active PROVINCE-level location code returned by GET /v1/catalog/profile-options. The live catalog is checked; this is not a static enum.",
             "minLength": 1,
             "nullable": true,
             "type": "string"
@@ -344,7 +347,9 @@
         "additionalProperties": false,
         "properties": {
           "refreshToken": {
+            "description": "Must be a non-empty opaque token. It is used exactly as supplied and is neither trimmed nor normalized.",
             "maxLength": 2048,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -357,8 +362,10 @@
         "additionalProperties": false,
         "properties": {
           "phone": {
+            "description": "Must be nonblank after trimming and parse as a valid Vietnamese phone number without an extension. National or E.164 input is accepted and normalized to Vietnamese E.164 before use.",
             "example": "+84901234567",
             "maxLength": 50,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -371,15 +378,19 @@
         "additionalProperties": false,
         "properties": {
           "challengeId": {
+            "description": "OTP challenge identifier returned by the request endpoint.",
             "format": "uuid",
             "type": "string"
           },
           "code": {
+            "description": "Exactly six ASCII digits; whitespace is not trimmed.",
             "pattern": "^\\d{6}$",
             "type": "string"
           },
           "deviceName": {
+            "description": "Must be nonblank after trimming.",
             "maxLength": 120,
+            "minLength": 1,
             "type": "string"
           }
         },

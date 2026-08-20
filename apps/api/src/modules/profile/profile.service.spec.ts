@@ -133,6 +133,18 @@ describe('ProfileService', () => {
     expect(repository.saved).toBeNull();
   });
 
+  it('rejects year zero before invoking the profile repository', async () => {
+    const { repository, service } = createHarness();
+    const getCatalog = jest.spyOn(repository, 'getCatalog');
+    const upsert = jest.spyOn(repository, 'upsert');
+
+    await expect(
+      service.upsert('user-1', validInput({ birthDate: '0000-01-01' })),
+    ).rejects.toMatchObject({ code: 'PROFILE_INVALID', field: 'birthDate' });
+    expect(getCatalog).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
   it.each(['VN-HCM-Q1', 'VN-HCM-Q1-BT'])(
     'rejects non-province hometown selection %s',
     async (hometownLocationCode) => {

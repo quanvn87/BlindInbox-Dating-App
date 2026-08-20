@@ -9,7 +9,12 @@ const logoutSchema = z
   .strict();
 
 export class LogoutDto {
-  @ApiProperty({ maxLength: 2048 })
+  @ApiProperty({
+    minLength: 1,
+    maxLength: 2048,
+    description:
+      'Must be a non-empty opaque token. It is used exactly as supplied and is neither trimmed nor normalized.',
+  })
   refreshToken!: string;
 
   static parse(input: unknown): LogoutDto {
