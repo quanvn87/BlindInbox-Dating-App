@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   Headers,
   HttpCode,
   HttpStatus,
@@ -14,6 +15,7 @@ import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
+  ApiForbiddenResponse,
   ApiHeader,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -75,6 +77,7 @@ export class AuthController {
   @ApiOkResponse({ type: AuthTokens })
   @ApiBadRequestResponse({ description: 'Invalid or expired OTP' })
   @ApiConflictResponse({ description: 'OTP challenge was already consumed' })
+  @ApiForbiddenResponse({ description: 'Account is inactive' })
   verifyOtp(
     @Headers('idempotency-key') idempotencyKey: unknown,
     @Body() body: unknown,
@@ -148,6 +151,9 @@ export class AuthController {
       }
       if (error.code === 'REFRESH_TOKEN_INVALID') {
         throw new UnauthorizedException({ code: error.code });
+      }
+      if (error.code === 'ACCOUNT_INACTIVE') {
+        throw new ForbiddenException({ code: error.code });
       }
       throw new BadRequestException({ code: error.code });
     }

@@ -203,6 +203,7 @@ final class _ProfileForm extends ConsumerWidget {
             locations: catalog.activeLocations,
             selectedCode: draft.hometownLocationCode,
             keyPrefix: 'hometown-location',
+            provinceOnly: true,
             onChanged: controller.setHometownLocation,
           ),
           const SizedBox(height: 20),

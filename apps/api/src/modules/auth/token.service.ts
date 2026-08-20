@@ -41,6 +41,9 @@ export class TokenService {
   ) {}
 
   async issue(user: AuthUser, deviceName: string): Promise<AuthTokens> {
+    if (user.status !== 'ACTIVE') {
+      throw new AuthError('ACCOUNT_INACTIVE');
+    }
     const now = this.clock.now();
     const material = this.createRefreshTokenMaterial(user.id, deviceName, now);
     await this.repository.createRefreshSession(material.session);
@@ -61,7 +64,8 @@ export class TokenService {
     }
 
     const user = await this.repository.findUserById(current.userId);
-    if (!user) {
+    if (!user || user.status !== 'ACTIVE') {
+      await this.repository.revokeRefreshSessionByDigest(currentDigest, now);
       throw new AuthError('REFRESH_TOKEN_INVALID');
     }
 

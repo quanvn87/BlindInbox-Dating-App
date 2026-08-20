@@ -38,6 +38,13 @@ const ACTIVE_CATALOG: ProfileCatalog = {
       parentCode: 'VN-HCM',
       isActive: true,
     },
+    {
+      code: 'VN-HCM-Q1-BT',
+      name: 'PhÆ°á»ng Báº¿n ThÃ nh',
+      level: 'WARD',
+      parentCode: 'VN-HCM-Q1',
+      isActive: true,
+    },
   ],
   prompts: [
     {
@@ -125,6 +132,21 @@ describe('ProfileService', () => {
     ).rejects.toMatchObject({ code: 'PROFILE_UNDERAGE', field: 'birthDate' });
     expect(repository.saved).toBeNull();
   });
+
+  it.each(['VN-HCM-Q1', 'VN-HCM-Q1-BT'])(
+    'rejects non-province hometown selection %s',
+    async (hometownLocationCode) => {
+      const { repository, service } = createHarness();
+
+      await expect(
+        service.upsert('user-1', validInput({ hometownLocationCode })),
+      ).rejects.toMatchObject({
+        code: 'PROFILE_CATALOG_SELECTION_INVALID',
+        field: 'hometownLocationCode',
+      });
+      expect(repository.saved).toBeNull();
+    },
+  );
 
   it.each<['interestedInGenders' | 'connectionIntents', Partial<ProfileInput>]>(
     [

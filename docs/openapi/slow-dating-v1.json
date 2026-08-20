@@ -540,6 +540,9 @@
           "400": {
             "description": "Invalid or expired OTP"
           },
+          "403": {
+            "description": "Account is inactive"
+          },
           "409": {
             "description": "OTP challenge was already consumed"
           }

@@ -11,6 +11,7 @@ import {
   TEST_ORACLE_SCHEMA,
 } from './../src/common/database/oracle-schema.guard';
 import { OracleService } from './../src/common/database/oracle.service';
+import { migrateCanonicalOracleTestSchema } from './oracle-test-environment';
 
 const PROFILE_TABLES_IN_DROP_ORDER = [
   'PROFILE_PROMPT_ANSWERS',
@@ -59,6 +60,18 @@ async function resetProfileMigration(oracleService: OracleService) {
         "DELETE FROM schema_migrations WHERE version = '003_profile'",
       );
     }
+    const migrationRunTableResult = await connection.execute<{
+      TABLE_NAME: string;
+    }>(
+      "SELECT table_name FROM user_tables WHERE table_name = 'SCHEMA_MIGRATION_RUNS'",
+      [],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+    if (migrationRunTableResult.rows?.length) {
+      await connection.execute(
+        "DELETE FROM schema_migration_runs WHERE version = '003_profile'",
+      );
+    }
   });
 }
 
@@ -86,6 +99,7 @@ describe('Oracle integration', () => {
 
     migrationRunner = moduleFixture.get(MigrationRunner);
     oracleService = moduleFixture.get(OracleService);
+    await migrateCanonicalOracleTestSchema(moduleFixture);
     await resetProfileMigration(oracleService);
   });
 
@@ -107,6 +121,49 @@ describe('Oracle integration', () => {
       { VERSION: '002_profile_catalog' },
       { VERSION: '003_profile' },
     ]);
+  });
+
+  it('detects partial DDL and recovers only through the explicit TEST reset', async () => {
+    await migrationRunner.run();
+    await oracleService.withTransaction((connection) =>
+      connection.execute(
+        "DELETE FROM schema_migrations WHERE version = '003_profile'",
+      ),
+    );
+
+    try {
+      await expect(migrationRunner.run()).rejects.toThrow(
+        'Partial Oracle migration detected for 003_profile',
+      );
+
+      const recoverableRunner = migrationRunner as MigrationRunner & {
+        recoverLocalSchema(environment: 'test'): Promise<void>;
+      };
+      await recoverableRunner.recoverLocalSchema('test');
+      await migrationRunner.run();
+
+      const result = await oracleService.withConnection((connection) =>
+        connection.execute<{ VERSION: string }>(
+          'SELECT version FROM schema_migrations ORDER BY version',
+          [],
+          { outFormat: oracledb.OUT_FORMAT_OBJECT },
+        ),
+      );
+      expect(result.rows).toEqual([
+        { VERSION: '001_auth' },
+        { VERSION: '002_profile_catalog' },
+        { VERSION: '003_profile' },
+      ]);
+    } finally {
+      await oracleService.withTransaction((connection) =>
+        connection.execute(
+          `MERGE INTO schema_migrations target
+           USING (SELECT '003_profile' AS version FROM dual) source
+           ON (target.version = source.version)
+           WHEN NOT MATCHED THEN INSERT (version) VALUES (source.version)`,
+        ),
+      );
+    }
   });
 
   it('seeds the canonical active profile catalogs and location ancestry', async () => {

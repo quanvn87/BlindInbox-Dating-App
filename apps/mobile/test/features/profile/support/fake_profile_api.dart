@@ -9,6 +9,8 @@ final class FakeProfileApi implements ProfileApi {
   ProfileApiException? catalogFailure;
   ProfileApiException? getFailure;
   ProfileApiException? putFailure;
+  Completer<void>? getStarted;
+  Completer<ProfileInput?>? getCompleter;
   Completer<ProfileInput>? putCompleter;
 
   final List<String> profileReads = [];
@@ -27,6 +29,14 @@ final class FakeProfileApi implements ProfileApi {
   @override
   Future<ProfileInput?> getProfile({required String accessToken}) async {
     profileReads.add(accessToken);
+    final started = getStarted;
+    if (started != null && !started.isCompleted) {
+      started.complete();
+    }
+    final completer = getCompleter;
+    if (completer != null) {
+      return completer.future;
+    }
     final failure = getFailure;
     if (failure != null) {
       throw failure;

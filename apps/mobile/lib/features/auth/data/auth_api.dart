@@ -49,6 +49,7 @@ enum AuthApiFailure {
   invalidPhone,
   invalidOrExpiredCode,
   consumedCode,
+  inactiveAccount,
   invalidRefresh,
   network,
   invalidResponse,
@@ -129,6 +130,12 @@ final class DioAuthApi implements AuthApi {
         throw const AuthApiException(
           AuthApiFailure.consumedCode,
           'This code has already been used. Request a new code.',
+        );
+      }
+      if (error.response?.statusCode == 403) {
+        throw const AuthApiException(
+          AuthApiFailure.inactiveAccount,
+          'This account is not available. Contact support if you need help.',
         );
       }
       throw _networkFailure;

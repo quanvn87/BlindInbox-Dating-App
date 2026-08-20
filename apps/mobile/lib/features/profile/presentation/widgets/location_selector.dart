@@ -9,6 +9,7 @@ final class LocationSelector extends StatelessWidget {
     required this.keyPrefix,
     required this.onChanged,
     this.isRequired = false,
+    this.provinceOnly = false,
     super.key,
   });
 
@@ -18,6 +19,7 @@ final class LocationSelector extends StatelessWidget {
   final String keyPrefix;
   final ValueChanged<String?> onChanged;
   final bool isRequired;
+  final bool provinceOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -70,34 +72,38 @@ final class LocationSelector extends StatelessWidget {
             onChanged: provinces.isEmpty ? null : onChanged,
           ),
         ),
-        const SizedBox(height: 8),
-        KeyedSubtree(
-          key: ValueKey('$keyPrefix-district'),
-          child: _LocationDropdown(
-            key: ValueKey(
-              '$keyPrefix-district-${province?.code ?? 'none'}-'
-              '${district?.code ?? 'none'}',
+        if (!provinceOnly) ...[
+          const SizedBox(height: 8),
+          KeyedSubtree(
+            key: ValueKey('$keyPrefix-district'),
+            child: _LocationDropdown(
+              key: ValueKey(
+                '$keyPrefix-district-${province?.code ?? 'none'}-'
+                '${district?.code ?? 'none'}',
+              ),
+              label: 'District',
+              options: districts,
+              value: district?.code,
+              onChanged: province == null || districts.isEmpty
+                  ? null
+                  : onChanged,
             ),
-            label: 'District',
-            options: districts,
-            value: district?.code,
-            onChanged: province == null || districts.isEmpty ? null : onChanged,
           ),
-        ),
-        const SizedBox(height: 8),
-        KeyedSubtree(
-          key: ValueKey('$keyPrefix-ward'),
-          child: _LocationDropdown(
-            key: ValueKey(
-              '$keyPrefix-ward-${district?.code ?? 'none'}-'
-              '${ward?.code ?? 'none'}',
+          const SizedBox(height: 8),
+          KeyedSubtree(
+            key: ValueKey('$keyPrefix-ward'),
+            child: _LocationDropdown(
+              key: ValueKey(
+                '$keyPrefix-ward-${district?.code ?? 'none'}-'
+                '${ward?.code ?? 'none'}',
+              ),
+              label: 'Ward',
+              options: wards,
+              value: ward?.code,
+              onChanged: district == null || wards.isEmpty ? null : onChanged,
             ),
-            label: 'Ward',
-            options: wards,
-            value: ward?.code,
-            onChanged: district == null || wards.isEmpty ? null : onChanged,
           ),
-        ),
+        ],
         if (!isRequired && selectedCode != null)
           Align(
             alignment: Alignment.centerLeft,

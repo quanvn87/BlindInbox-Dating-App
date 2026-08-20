@@ -56,6 +56,7 @@ export type AuthErrorCode =
   | 'OTP_EXPIRED'
   | 'OTP_ATTEMPTS_EXCEEDED'
   | 'OTP_CONSUMED'
+  | 'ACCOUNT_INACTIVE'
   | 'REFRESH_TOKEN_INVALID';
 
 export class AuthError extends Error {

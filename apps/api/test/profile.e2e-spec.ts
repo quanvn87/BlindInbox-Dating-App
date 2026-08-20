@@ -6,7 +6,6 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
-import { MigrationRunner } from './../src/common/database/migration-runner';
 import {
   assertOracleServiceSchema,
   TEST_ORACLE_SCHEMA,
@@ -18,6 +17,7 @@ import type {
   ProfileCatalog,
   ProfileInput,
 } from './../src/modules/profile/profile.types';
+import { migrateCanonicalOracleTestSchema } from './oracle-test-environment';
 
 const JWT_SECRET = 'test-access-secret-at-least-32-characters';
 
@@ -39,7 +39,7 @@ describe('Profile API (e2e)', () => {
     oracleService = moduleFixture.get(OracleService);
     authRepository = moduleFixture.get(OracleAuthRepository);
     tokenService = moduleFixture.get(TokenService);
-    await moduleFixture.get(MigrationRunner).run();
+    await migrateCanonicalOracleTestSchema(moduleFixture);
   });
 
   beforeEach(async () => {

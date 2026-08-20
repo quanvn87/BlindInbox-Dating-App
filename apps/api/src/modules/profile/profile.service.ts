@@ -184,6 +184,9 @@ export class ProfileService {
       catalog.connectionIntents,
     );
     const activeLocations = this.activeCodes(catalog.locations);
+    const activeProvinceLocations = this.activeCodes(
+      catalog.locations.filter(({ level }) => level === 'PROVINCE'),
+    );
     const activePrompts = this.activeCodes(catalog.prompts);
 
     if (!activeGenders.has(input.genderIdentity)) {
@@ -200,7 +203,7 @@ export class ProfileService {
     }
     if (
       input.hometownLocationCode !== null &&
-      !activeLocations.has(input.hometownLocationCode)
+      !activeProvinceLocations.has(input.hometownLocationCode)
     ) {
       this.catalogInvalid('hometownLocationCode');
     }

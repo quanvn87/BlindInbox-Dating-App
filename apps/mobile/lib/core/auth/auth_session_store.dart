@@ -28,18 +28,31 @@ final class FlutterSecureStorageAdapter implements SecureStorageAdapter {
 }
 
 final class AuthSessionStore {
-  const AuthSessionStore(this._storage);
+  AuthSessionStore(this._storage);
 
   static const refreshTokenKey = 'refresh_token';
 
   final SecureStorageAdapter _storage;
+  Future<void> _pendingOperation = Future<void>.value();
 
-  Future<String?> readRefreshToken() => _storage.read(key: refreshTokenKey);
+  Future<String?> readRefreshToken() =>
+      _enqueueOperation(() => _storage.read(key: refreshTokenKey));
 
-  Future<void> saveRefreshToken(String refreshToken) =>
-      _storage.write(key: refreshTokenKey, value: refreshToken);
+  Future<void> saveRefreshToken(String refreshToken) => _enqueueOperation(
+    () => _storage.write(key: refreshTokenKey, value: refreshToken),
+  );
 
-  Future<void> clearRefreshToken() => _storage.delete(key: refreshTokenKey);
+  Future<void> clearRefreshToken() =>
+      _enqueueOperation(() => _storage.delete(key: refreshTokenKey));
+
+  Future<T> _enqueueOperation<T>(Future<T> Function() operation) {
+    final result = _pendingOperation.then((_) => operation());
+    _pendingOperation = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
+  }
 }
 
 final secureStorageAdapterProvider = Provider<SecureStorageAdapter>(

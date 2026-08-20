@@ -6,7 +6,6 @@ import type { Connection } from 'oracledb';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
-import { MigrationRunner } from './../src/common/database/migration-runner';
 import {
   assertOracleServiceSchema,
   TEST_ORACLE_SCHEMA,
@@ -18,6 +17,7 @@ import {
   type ProfileRepository,
 } from './../src/modules/profile/profile.repository';
 import type { ProfileInput } from './../src/modules/profile/profile.types';
+import { migrateCanonicalOracleTestSchema } from './oracle-test-environment';
 
 describe('Oracle profile repository integration', () => {
   let app: INestApplication<App>;
@@ -32,7 +32,7 @@ describe('Oracle profile repository integration', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
     oracleService = moduleFixture.get(OracleService);
-    await moduleFixture.get(MigrationRunner).run();
+    await migrateCanonicalOracleTestSchema(moduleFixture);
   });
 
   beforeEach(async () => {

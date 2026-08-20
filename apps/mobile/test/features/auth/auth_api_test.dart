@@ -89,6 +89,39 @@ void main() {
     );
   });
 
+  test(
+    'maps an inactive account response without leaking server detail',
+    () async {
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test/v1'))
+        ..httpClientAdapter = StubAdapter(
+          (_) => jsonResponse(403, {'message': 'sensitive server detail'}),
+        );
+      final api = DioAuthApi(dio);
+
+      await expectLater(
+        api.verifyOtp(
+          challengeId: 'challenge-id',
+          code: List.generate(6, (index) => index + 1).join(),
+          deviceName: 'Test device',
+          idempotencyKey: '00000000-0000-4000-8000-000000000006',
+        ),
+        throwsA(
+          isA<AuthApiException>()
+              .having(
+                (error) => error.kind,
+                'kind',
+                AuthApiFailure.inactiveAccount,
+              )
+              .having(
+                (error) => error.toString(),
+                'redacted diagnostics',
+                isNot(contains('sensitive server detail')),
+              ),
+        ),
+      );
+    },
+  );
+
   test('maps invalid refresh without leaking response content', () async {
     final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test/v1'))
       ..httpClientAdapter = StubAdapter(

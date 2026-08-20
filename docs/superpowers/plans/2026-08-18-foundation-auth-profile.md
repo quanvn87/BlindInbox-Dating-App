@@ -183,7 +183,7 @@ git commit -m "feat(api): scaffold health endpoint"
 
 Run: 'npm.cmd install oracledb@6'.
 
-Bootstrap SQL creates 'SLOW_DATING_DEV' and 'SLOW_DATING_TEST' in XEPDB1, receiving the selected dev/test passwords at invocation through SQL*Plus/SQLcl substitution variables. Developers store selected values only in ignored `.env` files or local environment variables; no fixed Oracle passwords are committed. The bootstrap grants CREATE SESSION/TABLE/SEQUENCE/VIEW and quota on USERS.
+Bootstrap SQL creates 'SLOW_DATING_DEV' and 'SLOW_DATING_TEST' in XEPDB1, receiving the selected dev/test passwords through redirected SQL*Plus standard input rather than process arguments. Developers store selected values only in ignored `.env` files or local environment variables; no fixed Oracle passwords are committed or logged. The bootstrap grants CREATE SESSION/TABLE/SEQUENCE/VIEW and quota on USERS.
 
 - [ ] **Step 2: Write a failing real-Oracle test**
 
@@ -204,13 +204,13 @@ $env:ORACLE_CONNECT_STRING='localhost:1521/XEPDB1'
 npm.cmd test -- oracle.integration-spec.ts --runInBand
 ~~~
 
-Test setup maps only these explicit TEST aliases to runtime Oracle credentials and rejects missing aliases, preventing DEV fallback.
+Test setup maps only these explicit TEST aliases to runtime Oracle credentials, requires the exact `SLOW_DATING_TEST` user, and verifies connected `USER` and `CURRENT_SCHEMA` before migration or cleanup, preventing DEV fallback.
 
 Expected: FAIL because service/table is missing.
 
 - [ ] **Step 4: Implement pool, transaction and migration runner**
 
-Use Thin mode and pool min 1/max 5. Commit success, rollback error, always close. Split migrations only on a line '-- statement'. '001_auth.sql' creates:
+Use Thin mode and pool min 1/max 5. Application DML transactions commit success, roll back errors and always close. Oracle DDL commits implicitly: the migration runner records `STARTED`/`APPLIED`, detects objects left by an unapplied migration, stops instead of blindly continuing, and supports only an explicit destructive DEV/TEST clean-schema recovery. It never implies DDL rollback or performs production recovery automatically. Split migrations only on a line '-- statement'. '001_auth.sql' creates:
 
 ~~~sql
 CREATE TABLE schema_migrations (

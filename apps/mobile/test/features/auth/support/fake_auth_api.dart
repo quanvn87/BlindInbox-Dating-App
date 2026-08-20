@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:slow_dating/core/auth/auth_session_store.dart';
 import 'package:slow_dating/features/auth/data/auth_api.dart';
@@ -6,7 +7,7 @@ import 'package:slow_dating/features/auth/data/auth_api.dart';
 final class FakeAuthApi implements AuthApi {
   DateTime expiresAt = DateTime.utc(2030, 1, 1, 0, 1);
   AuthTokens tokens = AuthTokens(
-    accessToken: 'access-token-from-fake',
+    accessToken: fakeAccessToken(),
     accessExpiresAt: DateTime.utc(2030, 1, 1, 1),
     refreshToken: 'refresh-token-from-fake',
     refreshExpiresAt: DateTime.utc(2030, 2),
@@ -105,12 +106,23 @@ final class FakeAuthApi implements AuthApi {
   }
 }
 
+String fakeAccessToken({String userId = 'fake-user'}) {
+  final header = base64Url.encode(utf8.encode('{}')).replaceAll('=', '');
+  final payload = base64Url
+      .encode(utf8.encode(jsonEncode({'sub': userId})))
+      .replaceAll('=', '');
+  return '$header.$payload.signature';
+}
+
 final class MemorySecureStorageAdapter implements SecureStorageAdapter {
   final Map<String, String> values = {};
   Object? readFailure;
   Object? writeFailure;
   Object? deleteFailure;
+  Completer<void>? readCompleter;
+  Completer<void>? readStarted;
   Completer<void>? writeCompleter;
+  Completer<void>? writeStarted;
 
   @override
   Future<void> delete({required String key}) async {
@@ -123,22 +135,35 @@ final class MemorySecureStorageAdapter implements SecureStorageAdapter {
 
   @override
   Future<String?> read({required String key}) async {
+    final value = values[key];
+    final started = readStarted;
+    if (started != null && !started.isCompleted) {
+      started.complete();
+    }
+    final completer = readCompleter;
+    if (completer != null) {
+      await completer.future;
+    }
     final failure = readFailure;
     if (failure != null) {
       throw failure;
     }
-    return values[key];
+    return value;
   }
 
   @override
   Future<void> write({required String key, required String value}) async {
-    final failure = writeFailure;
-    if (failure != null) {
-      throw failure;
+    final started = writeStarted;
+    if (started != null && !started.isCompleted) {
+      started.complete();
     }
     final completer = writeCompleter;
     if (completer != null) {
       await completer.future;
+    }
+    final failure = writeFailure;
+    if (failure != null) {
+      throw failure;
     }
     values[key] = value;
   }

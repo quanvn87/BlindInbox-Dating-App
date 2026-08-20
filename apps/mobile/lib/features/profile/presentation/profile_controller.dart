@@ -15,14 +15,31 @@ typedef ProfileIdGenerator = String Function();
 /// the user out without losing their work before they authenticate again.
 final class ProfileDraftStore {
   ProfileDraft _draft = const ProfileDraft();
+  String? _ownerUserId;
 
-  ProfileDraft get draft => _draft;
+  ProfileDraft draftFor(String? userId) {
+    if (userId == null) {
+      return const ProfileDraft();
+    }
+    if (_ownerUserId != userId) {
+      _ownerUserId = userId;
+      _draft = const ProfileDraft();
+    }
+    return _draft;
+  }
 
-  void save(ProfileDraft draft) {
+  void save(String userId, ProfileDraft draft) {
+    if (_ownerUserId != userId) {
+      _ownerUserId = userId;
+      _draft = const ProfileDraft();
+    }
     _draft = draft;
   }
 
-  void clear() {
+  void clear(String? userId) {
+    if (userId != null && _ownerUserId != userId) {
+      return;
+    }
     _draft = const ProfileDraft();
   }
 }
@@ -91,12 +108,23 @@ final class ProfileController extends StateNotifier<ProfileState> {
     required this._generateId,
     required ProfileDraftStore draftStore,
   }) : _draftStore = draftStore,
-       super(ProfileState(draft: draftStore.draft));
+       _boundUserId = _sessionController.value.userId,
+       _boundSessionLineage = _sessionController.sessionLineage,
+       super(
+         ProfileState(
+           draft: draftStore.draftFor(_sessionController.value.userId),
+         ),
+       ) {
+    _sessionController.addListener(_handleIdentityChange);
+  }
 
   final ProfileApi _api;
   final AuthSessionController _sessionController;
   final ProfileIdGenerator _generateId;
   final ProfileDraftStore _draftStore;
+  String? _boundUserId;
+  int _boundSessionLineage;
+  Object? _activeSubmit;
 
   bool _disposed = false;
 
@@ -199,14 +227,19 @@ final class ProfileController extends StateNotifier<ProfileState> {
     if (_disposed || !state.canSubmit) {
       return false;
     }
-    final accessToken = _sessionController.value.accessToken;
-    if (accessToken == null) {
+    final submittingSession = _sessionController.value;
+    final accessToken = submittingSession.accessToken;
+    final submittingUserId = submittingSession.userId;
+    if (accessToken == null || submittingUserId == null) {
       state = state.copyWith(submitError: _sessionExpiredError);
       return false;
     }
 
     final input = state.draft.toInput();
     final idempotencyKey = _generateId();
+    final submittingSessionLineage = _sessionController.sessionLineage;
+    final submitOperation = Object();
+    _activeSubmit = submitOperation;
     state = state.copyWith(isSubmitting: true, submitError: null);
     try {
       await _api.putProfile(
@@ -214,10 +247,15 @@ final class ProfileController extends StateNotifier<ProfileState> {
         idempotencyKey: idempotencyKey,
         input: input,
       );
-      if (_disposed) {
+      if (!_ownsSubmit(
+        operation: submitOperation,
+        userId: submittingUserId,
+        sessionLineage: submittingSessionLineage,
+      )) {
         return false;
       }
-      _draftStore.clear();
+      _activeSubmit = null;
+      _draftStore.clear(submittingUserId);
       state = state.copyWith(
         draft: const ProfileDraft(),
         isSubmitting: false,
@@ -226,10 +264,12 @@ final class ProfileController extends StateNotifier<ProfileState> {
       _sessionController.markProfileComplete();
       return true;
     } on ProfileApiException catch (error) {
-      if (!_disposed) {
-        if (error.kind == ProfileApiFailure.unauthorized) {
-          _sessionController.signOut();
-        }
+      if (_ownsSubmit(
+        operation: submitOperation,
+        userId: submittingUserId,
+        sessionLineage: submittingSessionLineage,
+      )) {
+        _activeSubmit = null;
         state = state.copyWith(
           isSubmitting: false,
           submitError: error.userMessage,
@@ -237,7 +277,12 @@ final class ProfileController extends StateNotifier<ProfileState> {
       }
       return false;
     } on Object {
-      if (!_disposed) {
+      if (_ownsSubmit(
+        operation: submitOperation,
+        userId: submittingUserId,
+        sessionLineage: submittingSessionLineage,
+      )) {
+        _activeSubmit = null;
         state = state.copyWith(
           isSubmitting: false,
           submitError: _unexpectedError,
@@ -247,11 +292,26 @@ final class ProfileController extends StateNotifier<ProfileState> {
     }
   }
 
+  bool _ownsSubmit({
+    required Object operation,
+    required String userId,
+    required int sessionLineage,
+  }) =>
+      !_disposed &&
+      identical(_activeSubmit, operation) &&
+      _sessionController.sessionLineage == sessionLineage &&
+      _sessionController.value.userId == userId &&
+      _boundUserId == userId;
+
   void _updateDraft(ProfileDraft draft) {
     if (_disposed || state.isSubmitting) {
       return;
     }
-    _draftStore.save(draft);
+    final userId = _boundUserId;
+    if (userId == null) {
+      return;
+    }
+    _draftStore.save(userId, draft);
     state = state.copyWith(draft: draft, submitError: null);
   }
 
@@ -259,7 +319,7 @@ final class ProfileController extends StateNotifier<ProfileState> {
     if (_disposed || state.isSubmitting) {
       return;
     }
-    _draftStore.clear();
+    _draftStore.clear(_boundUserId);
     state = state.copyWith(draft: const ProfileDraft(), submitError: null);
   }
 
@@ -271,9 +331,33 @@ final class ProfileController extends StateNotifier<ProfileState> {
     return updated.toList(growable: false);
   }
 
+  void _handleIdentityChange() {
+    if (_disposed) {
+      return;
+    }
+    final userId = _sessionController.value.userId;
+    final sessionLineage = _sessionController.sessionLineage;
+    final lineageChanged = sessionLineage != _boundSessionLineage;
+    final userChanged = userId != null && userId != _boundUserId;
+    if (!lineageChanged && !userChanged) {
+      return;
+    }
+    _boundSessionLineage = sessionLineage;
+    _activeSubmit = null;
+    if (userChanged) {
+      _boundUserId = userId;
+    }
+    state = state.copyWith(
+      draft: userChanged ? _draftStore.draftFor(userId) : state.draft,
+      isSubmitting: false,
+      submitError: null,
+    );
+  }
+
   @override
   void dispose() {
     _disposed = true;
+    _sessionController.removeListener(_handleIdentityChange);
     super.dispose();
   }
 }

@@ -6,7 +6,6 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
-import { MigrationRunner } from './../src/common/database/migration-runner';
 import {
   assertOracleServiceSchema,
   TEST_ORACLE_SCHEMA,
@@ -14,6 +13,7 @@ import {
 import { OracleService } from './../src/common/database/oracle.service';
 import { OTP_PROVIDER } from './../src/modules/auth/otp.provider';
 import type { OtpProvider } from './../src/modules/auth/otp.provider';
+import { migrateCanonicalOracleTestSchema } from './oracle-test-environment';
 
 class CapturingOtpProvider implements OtpProvider {
   readonly deliveries: Array<{ phoneE164: string; code: string }> = [];
@@ -42,7 +42,7 @@ describe('Auth API (e2e)', () => {
     await app.init();
 
     oracleService = moduleFixture.get(OracleService);
-    await moduleFixture.get(MigrationRunner).run();
+    await migrateCanonicalOracleTestSchema(moduleFixture);
   });
 
   beforeEach(async () => {
@@ -121,6 +121,66 @@ describe('Auth API (e2e)', () => {
       .expect('');
 
     await expectActiveRefreshSessions(0);
+  });
+
+  it('blocks verify, refresh, and guarded access after suspension', async () => {
+    const firstRequest = await request(app.getHttpServer())
+      .post('/v1/auth/otp/request')
+      .set('Idempotency-Key', randomUUID())
+      .send({ phone: '0901234567' })
+      .expect(202);
+    const firstChallenge = firstRequest.body as {
+      challengeId: string;
+    };
+    const firstVerify = await request(app.getHttpServer())
+      .post('/v1/auth/otp/verify')
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        challengeId: firstChallenge.challengeId,
+        code: otpProvider.deliveries.at(-1)!.code,
+        deviceName: 'Test device',
+      })
+      .expect(200);
+    const tokens = firstVerify.body as {
+      accessToken: string;
+      refreshToken: string;
+    };
+    const payload = JSON.parse(
+      Buffer.from(tokens.accessToken.split('.')[1], 'base64url').toString(),
+    ) as { sub: string };
+    await oracleService.withTransaction((connection) =>
+      connection.execute(
+        "UPDATE app_users SET status = 'SUSPENDED' WHERE id = :userId",
+        { userId: payload.sub },
+      ),
+    );
+
+    const secondRequest = await request(app.getHttpServer())
+      .post('/v1/auth/otp/request')
+      .set('Idempotency-Key', randomUUID())
+      .send({ phone: '0901234567' })
+      .expect(202);
+    const secondChallenge = secondRequest.body as { challengeId: string };
+    await request(app.getHttpServer())
+      .post('/v1/auth/otp/verify')
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        challengeId: secondChallenge.challengeId,
+        code: otpProvider.deliveries.at(-1)!.code,
+        deviceName: 'Test device',
+      })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/v1/auth/refresh')
+      .set('Idempotency-Key', randomUUID())
+      .send({ refreshToken: tokens.refreshToken })
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .get('/v1/me/profile')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .expect(401);
   });
 
   it.each([

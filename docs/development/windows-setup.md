@@ -37,14 +37,14 @@ Edit the ignored `apps/api/.env`. Keep the aliases separate:
 
 - `ORACLE_USER`, `ORACLE_PASSWORD`, and `ORACLE_CONNECT_STRING` target `SLOW_DATING_DEV` in `XEPDB1`.
 - `ORACLE_TEST_USER`, `ORACLE_TEST_PASSWORD`, and `ORACLE_TEST_CONNECT_STRING` target only `SLOW_DATING_TEST` in `XEPDB1`.
-- The two local Oracle passwords must each be 12-128 characters using only `A-Z`, `a-z`, `0-9`, underscore, or hyphen. This intentionally excludes quotes, whitespace, and SQL metacharacters so SQL*Plus bootstrap argument interpolation is deterministic.
+- The two local Oracle passwords must each be 12-128 characters using only `A-Z`, `a-z`, `0-9`, underscore, or hyphen. This intentionally excludes quotes, whitespace, and SQL metacharacters so SQL*Plus substitution is deterministic.
 - `JWT_ACCESS_SECRET`, `OTP_PEPPER`, and `REFRESH_TOKEN_PEPPER` must each be at least 32 characters and must be local development values, never production secrets.
 
 Do not commit `.env`, paste its values into issue trackers, or reuse production credentials locally.
 
 ## Bootstrap XEPDB1 users
 
-The bootstrap is idempotent: it creates or updates the two local schema users, grants only the required development privileges, and gives them quota on `USERS`. Run it as a local Oracle administrator. The wrapper prompts without echoing values, validates the conservative password policy before invoking SQL*Plus, and stops on a nonzero SQL*Plus result:
+The bootstrap is idempotent: it creates or updates the two local schema users, grants only the required development privileges, and gives them quota on `USERS`. Run it as a local Oracle administrator. The wrapper prompts without echoing values, validates the conservative password policy, and sends the password definitions through redirected SQL*Plus standard input. Passwords are never process arguments, and captured SQL*Plus output is discarded rather than logged. The wrapper stops on a nonzero SQL*Plus result:
 
 ```powershell
 Set-Location D:\path\to\slow-dating
@@ -65,7 +65,21 @@ npm.cmd --prefix .\apps\api run migrate:dev
 
 The second invocation is a no-op. A nonzero exit indicates invalid configuration, an unreachable database, or a migration failure. The CLI intentionally does not print connection details or credentials.
 
-Oracle integration and end-to-end tests load only the explicit TEST aliases, remap them to the application configuration inside the test process, and apply the same migrations:
+Oracle DDL commits implicitly, so migrations do not claim transactional rollback. The runner records `STARTED` and `APPLIED` states, checks migration-owned objects before executing an unapplied version, and stops with a partial-migration error instead of blindly continuing when DDL and the applied marker disagree.
+
+For this learning project, recovery is an explicit clean-schema reset supported only for the canonical local DEV and TEST users. These commands delete all migration-owned data in the selected local schema, rebuild it, and never run automatically or against production:
+
+```powershell
+# Destructive: local SLOW_DATING_DEV data is removed.
+npm.cmd --prefix .\apps\api run migrate:recover:dev
+
+# Destructive: local SLOW_DATING_TEST data is removed.
+npm.cmd --prefix .\apps\api run migrate:recover:test
+```
+
+Use a recovery command only after the runner reports partial migration state. Back up any local data you need first. Production recovery requires a separately reviewed operational procedure; neither local recovery command accepts a production environment or schema.
+
+Oracle integration and end-to-end tests require the exact `SLOW_DATING_TEST` TEST alias, remap only the explicit TEST credentials inside the test process, and verify connected `USER` and `CURRENT_SCHEMA` before the migration runner or destructive cleanup can execute:
 
 ```powershell
 Set-Location D:\path\to\slow-dating
@@ -75,7 +89,7 @@ npm.cmd --prefix .\apps\api run test:e2e
 
 Never point the TEST aliases at `SLOW_DATING_DEV`: the test suites delete and replace test-owned rows. CI does not receive Oracle credentials and runs only the database-independent unit suite.
 
-If the development API reports `ORA-00942`, rerun `npm.cmd run migrate` with the DEV aliases active. Do not solve it by pointing development at the TEST schema.
+If the development API reports `ORA-00942`, rerun `npm.cmd run migrate:dev` with the DEV aliases active. Do not solve it by pointing development at the TEST schema.
 
 ## Start the API and Android app
 

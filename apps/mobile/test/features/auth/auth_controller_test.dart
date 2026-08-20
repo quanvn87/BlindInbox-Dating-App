@@ -6,6 +6,7 @@ import 'package:slow_dating/core/auth/auth_session_store.dart';
 import 'package:slow_dating/features/auth/data/auth_api.dart';
 import 'package:slow_dating/features/auth/presentation/auth_controller.dart';
 import 'package:slow_dating/features/profile/data/profile_api.dart';
+import 'package:slow_dating/features/profile/domain/profile_models.dart';
 
 import 'support/fake_auth_api.dart';
 import '../profile/support/fake_profile_api.dart';
@@ -145,10 +146,123 @@ void main() {
       });
       expect(session.value.accessToken, api.tokens.accessToken);
       expect(session.value.isProfileComplete, isFalse);
+      expect(profileApi.profileReads, [api.tokens.accessToken]);
       expect(controller.state.errorMessage, isNull);
       expect(api.verifications.single.idempotencyKey, ids.generated.last);
     },
   );
+
+  test(
+    'late OTP storage completion cannot overwrite a newer session',
+    () async {
+      await controller.requestOtp('0901234567');
+      storage.writeStarted = Completer<void>();
+      storage.writeCompleter = Completer<void>();
+
+      final verification = controller.verifyOtp(api.deliveredCode);
+      await storage.writeStarted!.future;
+      session.authenticate(
+        accessToken: fakeAccessToken(userId: 'newer-user'),
+        userId: 'newer-user',
+        isProfileComplete: false,
+      );
+      storage.writeCompleter!.complete();
+
+      expect(await verification, isFalse);
+      expect(session.value.userId, 'newer-user');
+    },
+  );
+
+  test('late OTP storage error cannot clear a newer credential', () async {
+    await controller.requestOtp('0901234567');
+    storage.writeStarted = Completer<void>();
+    storage.writeCompleter = Completer<void>();
+
+    final verification = controller.verifyOtp(api.deliveredCode);
+    await storage.writeStarted!.future;
+    session.authenticate(
+      accessToken: fakeAccessToken(userId: 'newer-user'),
+      userId: 'newer-user',
+      isProfileComplete: false,
+    );
+    final newerSave = store.saveRefreshToken('newer-refresh-token');
+    final delayedWrite = storage.writeCompleter!;
+    storage.writeCompleter = null;
+    delayedWrite.completeError(StateError('delayed write failure'));
+
+    expect(await verification, isFalse);
+    await newerSave;
+    expect(session.value.userId, 'newer-user');
+    expect(await store.readRefreshToken(), 'newer-refresh-token');
+  });
+
+  test(
+    'fresh OTP session with an existing profile routes as complete',
+    () async {
+      profileApi.currentProfile = completeProfileInput;
+      await controller.requestOtp('0901234567');
+
+      final verified = await controller.verifyOtp(api.deliveredCode);
+
+      expect(verified, isTrue);
+      expect(session.value.isProfileComplete, isTrue);
+      expect(profileApi.profileReads, [api.tokens.accessToken]);
+      expect(await store.readRefreshToken(), api.tokens.refreshToken);
+    },
+  );
+
+  test(
+    'fresh profile resolution failure does not persist issued tokens',
+    () async {
+      profileApi.getFailure = const ProfileApiException(
+        ProfileApiFailure.network,
+        'Unable to resolve your profile. Check your connection and try again.',
+      );
+      await controller.requestOtp('0901234567');
+
+      final verified = await controller.verifyOtp(api.deliveredCode);
+
+      expect(verified, isFalse);
+      expect(session.value.isAuthenticated, isFalse);
+      expect(await store.readRefreshToken(), isNull);
+      expect(profileApi.profileReads, [api.tokens.accessToken]);
+      expect(
+        controller.state.errorMessage,
+        'Unable to resolve your profile. Check your connection and try again.',
+      );
+      expect(
+        controller.state.toString(),
+        isNot(contains(api.tokens.accessToken)),
+      );
+      expect(
+        controller.state.toString(),
+        isNot(contains(api.tokens.refreshToken)),
+      );
+    },
+  );
+
+  test('late OTP profile error cannot sign out a newer session', () async {
+    await controller.requestOtp('0901234567');
+    profileApi.getStarted = Completer<void>();
+    profileApi.getCompleter = Completer<ProfileInput?>();
+
+    final verification = controller.verifyOtp(api.deliveredCode);
+    await profileApi.getStarted!.future;
+    session.authenticate(
+      accessToken: fakeAccessToken(userId: 'newer-user'),
+      userId: 'newer-user',
+      isProfileComplete: false,
+    );
+    profileApi.getCompleter!.completeError(
+      const ProfileApiException(
+        ProfileApiFailure.network,
+        'Unable to resolve the profile.',
+      ),
+    );
+
+    expect(await verification, isFalse);
+    expect(session.value.userId, 'newer-user');
+  });
 
   test(
     'verify persistence failure clears stale token and stays signed out',
@@ -188,6 +302,31 @@ void main() {
   });
 
   test(
+    'delayed stale restore read cannot consume a newer session credential',
+    () async {
+      await store.saveRefreshToken('account-a-refresh-token');
+      storage.readStarted = Completer<void>();
+      storage.readCompleter = Completer<void>();
+
+      final restoration = controller.restoreSession();
+      await storage.readStarted!.future;
+      session.authenticate(
+        accessToken: fakeAccessToken(userId: 'account-b'),
+        userId: 'account-b',
+        isProfileComplete: false,
+      );
+      final newerSave = store.saveRefreshToken('account-b-refresh-token');
+      storage.readCompleter!.complete();
+
+      expect(await restoration, isFalse);
+      await newerSave;
+      expect(api.refreshes, isEmpty);
+      expect(session.value.userId, 'account-b');
+      expect(await store.readRefreshToken(), 'account-b-refresh-token');
+    },
+  );
+
+  test(
     'returning session with an existing profile routes as complete',
     () async {
       await store.saveRefreshToken('stored-refresh-token');
@@ -201,6 +340,52 @@ void main() {
       expect(profileApi.profileReads, [api.tokens.accessToken]);
     },
   );
+
+  test(
+    'late restore storage completion cannot overwrite a newer session',
+    () async {
+      await store.saveRefreshToken('stored-refresh-token');
+      storage.writeStarted = Completer<void>();
+      storage.writeCompleter = Completer<void>();
+
+      final restoration = controller.restoreSession();
+      await storage.writeStarted!.future;
+      session.authenticate(
+        accessToken: fakeAccessToken(userId: 'newer-user'),
+        userId: 'newer-user',
+        isProfileComplete: false,
+      );
+      storage.writeCompleter!.complete();
+
+      expect(await restoration, isFalse);
+      expect(session.value.userId, 'newer-user');
+    },
+  );
+
+  test('late restore profile error cannot sign out a newer session', () async {
+    await store.saveRefreshToken('stored-refresh-token');
+    profileApi.getStarted = Completer<void>();
+    profileApi.getCompleter = Completer<ProfileInput?>();
+
+    final restoration = controller.restoreSession();
+    await profileApi.getStarted!.future;
+    session.authenticate(
+      accessToken: fakeAccessToken(userId: 'newer-user'),
+      userId: 'newer-user',
+      isProfileComplete: false,
+    );
+    await store.saveRefreshToken('newer-refresh-token');
+    profileApi.getCompleter!.completeError(
+      const ProfileApiException(
+        ProfileApiFailure.network,
+        'Unable to resolve the profile.',
+      ),
+    );
+
+    expect(await restoration, isFalse);
+    expect(session.value.userId, 'newer-user');
+    expect(await store.readRefreshToken(), 'newer-refresh-token');
+  });
 
   test('returning session with a 404 profile routes to onboarding', () async {
     await store.saveRefreshToken('stored-refresh-token');
@@ -234,6 +419,7 @@ void main() {
     await store.saveRefreshToken('invalid-refresh-token');
     session.authenticate(
       accessToken: 'stale-access-token',
+      userId: 'stale-user',
       isProfileComplete: true,
     );
     api.refreshFailure = const AuthApiException(
@@ -279,6 +465,7 @@ void main() {
             'stored-refresh-token';
         session.authenticate(
           accessToken: 'session-before-disposal',
+          userId: 'disposal-user',
           isProfileComplete: true,
         );
         api.refreshCompleter = Completer<AuthTokens>();
@@ -301,6 +488,7 @@ void main() {
     storage.values[AuthSessionStore.refreshTokenKey] = 'stored-refresh-token';
     session.authenticate(
       accessToken: 'session-before-disposal',
+      userId: 'disposal-user',
       isProfileComplete: true,
     );
     storage.writeCompleter = Completer<void>();

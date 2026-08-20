@@ -167,6 +167,8 @@ final class AuthController extends StateNotifier<AuthState> {
     }
 
     final commandId = _generateId();
+    final startingSessionGeneration = _sessionController.generation;
+    var expectedSessionGeneration = startingSessionGeneration;
     state = state.copyWith(
       operation: AuthOperation.verifyingOtp,
       errorMessage: null,
@@ -178,31 +180,64 @@ final class AuthController extends StateNotifier<AuthState> {
         deviceName: deviceName,
         idempotencyKey: commandId,
       );
+      final userId = accessTokenSubject(tokens.accessToken);
+      final profile = await _profileApi.getProfile(
+        accessToken: tokens.accessToken,
+      );
+      if (_disposed) {
+        return false;
+      }
+      if (_sessionController.generation != startingSessionGeneration) {
+        state = state.copyWith(operation: AuthOperation.idle);
+        return false;
+      }
+      _sessionController.invalidatePendingOperations();
+      final authenticationGeneration = _sessionController.generation;
+      expectedSessionGeneration = authenticationGeneration;
       try {
         await _sessionStore.saveRefreshToken(tokens.refreshToken);
       } on Object {
-        await _clearPersistedRefreshToken();
-        if (!_disposed) {
+        await _clearPersistedRefreshTokenIfCurrent(authenticationGeneration);
+        if (!_disposed &&
+            _sessionController.generation == authenticationGeneration) {
           _sessionController.signOut();
           state = state.copyWith(
             operation: AuthOperation.idle,
             errorMessage: _unexpectedError,
           );
+        } else if (!_disposed) {
+          state = state.copyWith(operation: AuthOperation.idle);
         }
         return false;
       }
       if (_disposed) {
         return false;
       }
+      if (_sessionController.generation != authenticationGeneration) {
+        state = state.copyWith(operation: AuthOperation.idle);
+        return false;
+      }
       _sessionController.authenticate(
         accessToken: tokens.accessToken,
-        isProfileComplete: false,
+        userId: userId,
+        isProfileComplete: profile != null,
       );
       _ticker.stop();
       state = state.copyWith(operation: AuthOperation.idle, errorMessage: null);
       return true;
     } on AuthApiException catch (error) {
       if (!_disposed) {
+        state = state.copyWith(
+          operation: AuthOperation.idle,
+          errorMessage: error.userMessage,
+        );
+      }
+      return false;
+    } on ProfileApiException catch (error) {
+      if (!_disposed) {
+        if (_sessionController.generation == expectedSessionGeneration) {
+          _sessionController.signOut();
+        }
         state = state.copyWith(
           operation: AuthOperation.idle,
           errorMessage: error.userMessage,
@@ -224,6 +259,8 @@ final class AuthController extends StateNotifier<AuthState> {
     if (_disposed || state.isBusy) {
       return false;
     }
+    final startingSessionGeneration = _sessionController.generation;
+    var expectedSessionGeneration = startingSessionGeneration;
     state = state.copyWith(
       operation: AuthOperation.restoringSession,
       errorMessage: null,
@@ -233,13 +270,20 @@ final class AuthController extends StateNotifier<AuthState> {
       if (_disposed) {
         return false;
       }
+      if (_sessionController.generation != startingSessionGeneration) {
+        state = state.copyWith(operation: AuthOperation.idle);
+        return false;
+      }
       if (storedRefreshToken == null) {
         state = state.copyWith(operation: AuthOperation.idle);
         return false;
       }
       if (storedRefreshToken.isEmpty) {
-        await _clearPersistedRefreshToken();
-        _finishRestoreFailure(errorMessage: null);
+        await _clearPersistedRefreshTokenIfCurrent(expectedSessionGeneration);
+        _finishRestoreFailure(
+          errorMessage: null,
+          expectedGeneration: expectedSessionGeneration,
+        );
         return false;
       }
 
@@ -247,14 +291,29 @@ final class AuthController extends StateNotifier<AuthState> {
         refreshToken: storedRefreshToken,
         idempotencyKey: _generateId(),
       );
+      final userId = accessTokenSubject(tokens.accessToken);
+      if (_sessionController.generation != startingSessionGeneration) {
+        state = state.copyWith(operation: AuthOperation.idle);
+        return false;
+      }
+      _sessionController.invalidatePendingOperations();
+      final authenticationGeneration = _sessionController.generation;
+      expectedSessionGeneration = authenticationGeneration;
       try {
         await _sessionStore.saveRefreshToken(tokens.refreshToken);
       } on Object {
-        await _clearPersistedRefreshToken();
-        _finishRestoreFailure(errorMessage: _unexpectedError);
+        await _clearPersistedRefreshTokenIfCurrent(authenticationGeneration);
+        _finishRestoreFailure(
+          errorMessage: _unexpectedError,
+          expectedGeneration: authenticationGeneration,
+        );
         return false;
       }
       if (_disposed) {
+        return false;
+      }
+      if (_sessionController.generation != authenticationGeneration) {
+        state = state.copyWith(operation: AuthOperation.idle);
         return false;
       }
       final profile = await _profileApi.getProfile(
@@ -263,28 +322,47 @@ final class AuthController extends StateNotifier<AuthState> {
       if (_disposed) {
         return false;
       }
+      if (_sessionController.generation != authenticationGeneration) {
+        state = state.copyWith(operation: AuthOperation.idle);
+        return false;
+      }
       _sessionController.authenticate(
         accessToken: tokens.accessToken,
+        userId: userId,
         isProfileComplete: profile != null,
       );
       state = state.copyWith(operation: AuthOperation.idle);
       return true;
     } on AuthApiException catch (error) {
       if (error.kind == AuthApiFailure.invalidRefresh) {
-        await _clearPersistedRefreshToken();
+        await _clearPersistedRefreshTokenIfCurrent(expectedSessionGeneration);
       }
-      _finishRestoreFailure(errorMessage: error.userMessage);
+      _finishRestoreFailure(
+        errorMessage: error.userMessage,
+        expectedGeneration: expectedSessionGeneration,
+      );
       return false;
     } on ProfileApiException catch (error) {
-      _finishRestoreFailure(errorMessage: error.userMessage);
+      _finishRestoreFailure(
+        errorMessage: error.userMessage,
+        expectedGeneration: expectedSessionGeneration,
+      );
       return false;
     } on Object {
-      _finishRestoreFailure(errorMessage: _unexpectedError);
+      _finishRestoreFailure(
+        errorMessage: _unexpectedError,
+        expectedGeneration: expectedSessionGeneration,
+      );
       return false;
     }
   }
 
-  Future<void> _clearPersistedRefreshToken() async {
+  Future<void> _clearPersistedRefreshTokenIfCurrent(
+    int expectedGeneration,
+  ) async {
+    if (_sessionController.generation != expectedGeneration) {
+      return;
+    }
     try {
       await _sessionStore.clearRefreshToken();
     } on Object {
@@ -292,8 +370,15 @@ final class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  void _finishRestoreFailure({required String? errorMessage}) {
+  void _finishRestoreFailure({
+    required String? errorMessage,
+    required int expectedGeneration,
+  }) {
     if (_disposed) {
+      return;
+    }
+    if (_sessionController.generation != expectedGeneration) {
+      state = state.copyWith(operation: AuthOperation.idle);
       return;
     }
     _sessionController.signOut();

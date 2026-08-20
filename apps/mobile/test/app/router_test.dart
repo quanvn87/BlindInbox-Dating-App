@@ -52,6 +52,7 @@ void main() {
     final session = AuthSessionController(
       AuthSession.authenticated(
         accessToken: 'memory-only-access-token',
+        userId: 'router-user',
         isProfileComplete: false,
       ),
     );
@@ -67,6 +68,7 @@ void main() {
     final session = AuthSessionController(
       AuthSession.authenticated(
         accessToken: 'memory-only-access-token',
+        userId: 'router-user',
         isProfileComplete: true,
       ),
     );
@@ -84,6 +86,7 @@ void main() {
 
     session.authenticate(
       accessToken: 'memory-only-access-token',
+      userId: 'router-user',
       isProfileComplete: false,
     );
     await tester.pumpAndSettle();

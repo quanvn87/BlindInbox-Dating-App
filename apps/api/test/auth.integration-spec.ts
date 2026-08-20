@@ -5,7 +5,6 @@ import oracledb from 'oracledb';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
-import { MigrationRunner } from './../src/common/database/migration-runner';
 import {
   assertOracleServiceSchema,
   TEST_ORACLE_SCHEMA,
@@ -16,6 +15,7 @@ import type {
   OtpChallenge,
   RefreshSession,
 } from './../src/modules/auth/auth.types';
+import { migrateCanonicalOracleTestSchema } from './oracle-test-environment';
 
 describe('OracleAuthRepository integration', () => {
   let app: INestApplication<App>;
@@ -30,7 +30,7 @@ describe('OracleAuthRepository integration', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
     oracleService = moduleFixture.get(OracleService);
-    await moduleFixture.get(MigrationRunner).run();
+    await migrateCanonicalOracleTestSchema(moduleFixture);
     repository = new OracleAuthRepository(oracleService);
   });
 

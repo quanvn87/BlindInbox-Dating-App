@@ -30,6 +30,8 @@ API commands run in `apps/api`:
 ```powershell
 npm.cmd ci
 npm.cmd run migrate:dev
+# Only after partial migration detection; destructive to local DEV data:
+npm.cmd run migrate:recover:dev
 npm.cmd run start:dev
 npm.cmd run lint
 npm.cmd run build

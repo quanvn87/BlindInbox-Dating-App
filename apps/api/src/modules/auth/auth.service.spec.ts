@@ -305,6 +305,24 @@ describe('AuthService OTP domain', () => {
     ).rejects.toMatchObject<AuthError>({ code: 'OTP_ATTEMPTS_EXCEEDED' });
     expect(harness.repository.sessions.size).toBe(0);
   });
+
+  it.each(['SUSPENDED', 'DELETED'] as const)(
+    'does not issue a session when an existing user is %s',
+    async (status) => {
+      const harness = createHarness();
+      harness.repository.users.set('inactive-user', {
+        id: 'inactive-user',
+        phoneE164: '+84901234567',
+        status,
+      });
+      const { challengeId } = await harness.service.requestOtp('+84901234567');
+
+      await expect(
+        harness.service.verifyOtp(challengeId, '000042', 'Pixel 9'),
+      ).rejects.toMatchObject<AuthError>({ code: 'ACCOUNT_INACTIVE' });
+      expect(harness.repository.sessions.size).toBe(0);
+    },
+  );
 });
 
 describe('AuthService token domain', () => {
@@ -386,6 +404,22 @@ describe('AuthService token domain', () => {
       harness.service.refresh(tokens.refreshToken),
     ).rejects.toMatchObject<AuthError>({ code: 'REFRESH_TOKEN_INVALID' });
   });
+
+  it.each(['SUSPENDED', 'DELETED'] as const)(
+    'revokes and rejects refresh for a %s user',
+    async (status) => {
+      const harness = createHarness();
+      const { tokens } = await requestAndVerify(harness);
+      harness.repository.users.get('user-1')!.status = status;
+
+      await expect(
+        harness.service.refresh(tokens.refreshToken),
+      ).rejects.toMatchObject<AuthError>({ code: 'REFRESH_TOKEN_INVALID' });
+      expect(harness.repository.sessions.get('session-1')?.revokedAt).toEqual(
+        START,
+      );
+    },
+  );
 });
 
 describe('DevelopmentOtpProvider', () => {

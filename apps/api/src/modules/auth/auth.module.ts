@@ -64,6 +64,6 @@ import { TokenService } from './token.service';
         ),
     },
   ],
-  exports: [TokenService],
+  exports: [AUTH_REPOSITORY, TokenService],
 })
 export class AuthModule {}

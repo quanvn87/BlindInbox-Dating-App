@@ -4,10 +4,14 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 
 import { envSchema } from './common/config/env.schema';
-import { MigrationRunner } from './common/database/migration-runner';
+import {
+  MigrationRunner,
+  PartialMigrationError,
+} from './common/database/migration-runner';
 import {
   assertOracleServiceSchema,
   DEV_ORACLE_SCHEMA,
+  TEST_ORACLE_SCHEMA,
 } from './common/database/oracle-schema.guard';
 import { OracleModule } from './common/database/oracle.module';
 import { OracleService } from './common/database/oracle.service';
@@ -40,19 +44,41 @@ async function createMigrationContext(): Promise<MigrationContext> {
   });
 }
 
-export async function migrate(
+export async function migrateDevelopmentSchema(
   contextFactory: MigrationContextFactory = createMigrationContext,
+  configuration?: MigrationConfiguration,
 ): Promise<void> {
   const context = await contextFactory();
 
   try {
+    await assertDevelopmentContext(context, configuration, 'DEV migration');
     await context.get<MigrationRunner>(MigrationRunner).run();
   } finally {
     await context.close();
   }
 }
 
-export async function migrateDevelopmentSchema(
+export async function recoverDevelopmentSchema(
+  contextFactory: MigrationContextFactory = createMigrationContext,
+  configuration?: MigrationConfiguration,
+): Promise<void> {
+  const context = await contextFactory();
+
+  try {
+    await assertDevelopmentContext(
+      context,
+      configuration,
+      'DEV migration recovery',
+    );
+    const runner = context.get<MigrationRunner>(MigrationRunner);
+    await runner.recoverLocalSchema('development');
+    await runner.run();
+  } finally {
+    await context.close();
+  }
+}
+
+export async function recoverTestSchema(
   contextFactory: MigrationContextFactory = createMigrationContext,
   configuration?: MigrationConfiguration,
 ): Promise<void> {
@@ -61,38 +87,27 @@ export async function migrateDevelopmentSchema(
   try {
     const config =
       configuration ?? context.get<MigrationConfiguration>(ConfigService);
-    if (config.getOrThrow<string>('NODE_ENV') !== 'development') {
-      throw new Error('DEV migration requires NODE_ENV=development');
+    if (config.getOrThrow<string>('NODE_ENV') !== 'test') {
+      throw new Error('TEST migration recovery requires NODE_ENV=test');
     }
     if (
       config.getOrThrow<string>('ORACLE_USER').trim().toUpperCase() !==
-      DEV_ORACLE_SCHEMA
+      TEST_ORACLE_SCHEMA
     ) {
-      throw new Error('DEV migration requires the SLOW_DATING_DEV Oracle user');
+      throw new Error(
+        'TEST migration recovery requires the SLOW_DATING_TEST Oracle user',
+      );
     }
     await assertOracleServiceSchema(
       context.get<OracleService>(OracleService),
-      DEV_ORACLE_SCHEMA,
-      'DEV migration',
+      TEST_ORACLE_SCHEMA,
+      'TEST migration recovery',
     );
-    await context.get<MigrationRunner>(MigrationRunner).run();
+    const runner = context.get<MigrationRunner>(MigrationRunner);
+    await runner.recoverLocalSchema('test');
+    await runner.run();
   } finally {
     await context.close();
-  }
-}
-
-export async function runMigrationCli(
-  migrateSchema: () => Promise<void> = migrate,
-  reportError: ErrorReporter = (message) => console.error(message),
-): Promise<number> {
-  try {
-    await migrateSchema();
-    return 0;
-  } catch {
-    reportError(
-      'Oracle migration failed. Verify the configured schema and connection.',
-    );
-    return 1;
   }
 }
 
@@ -103,16 +118,65 @@ export async function runDevelopmentMigrationCli(
   try {
     await migrateSchema();
     return 0;
-  } catch {
+  } catch (error) {
     reportError(
-      'DEV Oracle migration failed. Verify the development schema and configuration.',
+      error instanceof PartialMigrationError
+        ? 'Partial Oracle migration detected. Run npm run migrate:recover:dev before retrying.'
+        : 'DEV Oracle migration failed. Verify the development schema and configuration.',
     );
     return 1;
   }
 }
 
-if (require.main === module) {
-  void runMigrationCli().then((exitCode) => {
-    process.exitCode = exitCode;
-  });
+export async function runDevelopmentRecoveryCli(
+  recoverSchema: () => Promise<void> = recoverDevelopmentSchema,
+  reportError: ErrorReporter = (message) => console.error(message),
+): Promise<number> {
+  try {
+    await recoverSchema();
+    return 0;
+  } catch {
+    reportError(
+      'DEV Oracle recovery failed. Verify the development schema and configuration.',
+    );
+    return 1;
+  }
+}
+
+export async function runTestRecoveryCli(
+  recoverSchema: () => Promise<void> = recoverTestSchema,
+  reportError: ErrorReporter = (message) => console.error(message),
+): Promise<number> {
+  try {
+    await recoverSchema();
+    return 0;
+  } catch {
+    reportError(
+      'TEST Oracle recovery failed. Verify the canonical test schema and configuration.',
+    );
+    return 1;
+  }
+}
+
+async function assertDevelopmentContext(
+  context: MigrationContext,
+  configuration: MigrationConfiguration | undefined,
+  operation: string,
+): Promise<void> {
+  const config =
+    configuration ?? context.get<MigrationConfiguration>(ConfigService);
+  if (config.getOrThrow<string>('NODE_ENV') !== 'development') {
+    throw new Error('DEV migration requires NODE_ENV=development');
+  }
+  if (
+    config.getOrThrow<string>('ORACLE_USER').trim().toUpperCase() !==
+    DEV_ORACLE_SCHEMA
+  ) {
+    throw new Error('DEV migration requires the SLOW_DATING_DEV Oracle user');
+  }
+  await assertOracleServiceSchema(
+    context.get<OracleService>(OracleService),
+    DEV_ORACLE_SCHEMA,
+    operation,
+  );
 }

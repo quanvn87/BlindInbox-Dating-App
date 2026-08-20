@@ -151,6 +151,7 @@ void main() {
       session = AuthSessionController(
         AuthSession.authenticated(
           accessToken: 'memory-access-token',
+          userId: 'profile-user',
           isProfileComplete: false,
         ),
       );
@@ -286,6 +287,136 @@ void main() {
       },
     );
 
+    test('late account A PUT success cannot mutate account B', () async {
+      final draftStore = ProfileDraftStore();
+      controller.dispose();
+      controller = ProfileController(
+        api: api,
+        sessionController: session,
+        generateId: ids.call,
+        draftStore: draftStore,
+      );
+      _completeDraft(controller);
+      api.putCompleter = Completer<ProfileInput>();
+
+      final accountASubmit = controller.submit();
+      session.authenticate(
+        accessToken: 'account-b-access-token',
+        userId: 'account-b',
+        isProfileComplete: false,
+      );
+      controller.setDisplayName('Account B draft');
+      expect(controller.state.draft.displayName, 'Account B draft');
+      final accountBDraft = controller.state.draft;
+      api.putCompleter!.complete(completeProfileInput);
+
+      expect(await accountASubmit, isFalse);
+      expect(session.value.userId, 'account-b');
+      expect(session.value.isProfileComplete, isFalse);
+      expect(controller.state.draft, accountBDraft);
+      expect(controller.state.isSubmitting, isFalse);
+      expect(controller.state.submitError, isNull);
+      expect(draftStore.draftFor('account-b'), accountBDraft);
+    });
+
+    test('late account A PUT failure cannot mutate account B', () async {
+      final draftStore = ProfileDraftStore();
+      controller.dispose();
+      controller = ProfileController(
+        api: api,
+        sessionController: session,
+        generateId: ids.call,
+        draftStore: draftStore,
+      );
+      _completeDraft(controller);
+      api.putCompleter = Completer<ProfileInput>();
+
+      final accountASubmit = controller.submit();
+      session.authenticate(
+        accessToken: 'account-b-access-token',
+        userId: 'account-b',
+        isProfileComplete: false,
+      );
+      controller.setDisplayName('Account B draft');
+      expect(controller.state.draft.displayName, 'Account B draft');
+      final accountBDraft = controller.state.draft;
+      api.putCompleter!.completeError(
+        const ProfileApiException(
+          ProfileApiFailure.network,
+          'Unable to save your profile. Check your connection and try again.',
+        ),
+      );
+
+      expect(await accountASubmit, isFalse);
+      expect(session.value.userId, 'account-b');
+      expect(session.value.isProfileComplete, isFalse);
+      expect(controller.state.draft, accountBDraft);
+      expect(controller.state.isSubmitting, isFalse);
+      expect(controller.state.submitError, isNull);
+      expect(draftStore.draftFor('account-b'), accountBDraft);
+    });
+
+    test('same-user reauthentication releases a stale submit', () async {
+      _completeDraft(controller);
+      api.putCompleter = Completer<ProfileInput>();
+
+      final staleSubmit = controller.submit();
+      session.signOut();
+      session.authenticate(
+        accessToken: 'reauthenticated-access-token',
+        userId: 'profile-user',
+        isProfileComplete: false,
+      );
+      controller.setBio('Draft after reauthentication');
+
+      expect(controller.state.isSubmitting, isFalse);
+      expect(controller.state.draft.bio, 'Draft after reauthentication');
+      api.putCompleter!.complete(completeProfileInput);
+      expect(await staleSubmit, isFalse);
+      expect(controller.state.draft.bio, 'Draft after reauthentication');
+      expect(session.value.isProfileComplete, isFalse);
+    });
+
+    test('same-user reauthentication ignores a stale submit failure', () async {
+      _completeDraft(controller);
+      api.putCompleter = Completer<ProfileInput>();
+
+      final staleSubmit = controller.submit();
+      session.signOut();
+      session.authenticate(
+        accessToken: 'reauthenticated-access-token',
+        userId: 'profile-user',
+        isProfileComplete: false,
+      );
+      controller.setBio('Draft after reauthentication');
+      api.putCompleter!.completeError(
+        const ProfileApiException(
+          ProfileApiFailure.network,
+          'Unable to save your profile. Check your connection and try again.',
+        ),
+      );
+
+      expect(await staleSubmit, isFalse);
+      expect(controller.state.isSubmitting, isFalse);
+      expect(controller.state.draft.bio, 'Draft after reauthentication');
+      expect(controller.state.submitError, isNull);
+      expect(session.value.isProfileComplete, isFalse);
+    });
+
+    test('same-session token rotation preserves an in-flight submit', () async {
+      _completeDraft(controller);
+      api.putCompleter = Completer<ProfileInput>();
+
+      final submit = controller.submit();
+      session.replaceAccessToken('rotated-access-token');
+      api.putCompleter!.complete(completeProfileInput);
+
+      expect(await submit, isTrue);
+      expect(session.value.accessToken, 'rotated-access-token');
+      expect(session.value.isProfileComplete, isTrue);
+      expect(api.puts.single.idempotencyKey, ids.generated.single);
+    });
+
     test(
       'successful PUT marks profile complete for exact router redirect',
       () async {
@@ -324,6 +455,7 @@ void main() {
       final session = AuthSessionController(
         AuthSession.authenticated(
           accessToken: 'first-memory-token',
+          userId: 'user-one',
           isProfileComplete: false,
         ),
       );
@@ -360,12 +492,14 @@ void main() {
       final before = firstController.state.draft;
 
       expect(await firstController.submit(), isFalse);
-      expect(session.value.isAuthenticated, isFalse);
+      expect(session.value.isAuthenticated, isTrue);
+      session.signOut();
       firstSubscription.close();
       await container.pump();
 
       session.authenticate(
         accessToken: 'second-memory-token',
+        userId: 'user-one',
         isProfileComplete: false,
       );
       final secondSubscription = container.listen(
@@ -413,10 +547,63 @@ void main() {
     },
   );
 
+  test(
+    'a different authenticated user never receives the retained draft',
+    () async {
+      final session = AuthSessionController(
+        AuthSession.authenticated(
+          accessToken: 'first-memory-token',
+          userId: 'user-one',
+          isProfileComplete: false,
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          profileApiProvider.overrideWithValue(FakeProfileApi()),
+          authSessionControllerProvider.overrideWith((ref) => session),
+        ],
+      );
+      addTearDown(container.dispose);
+      final firstSubscription = container.listen(
+        profileControllerProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      container
+          .read(profileControllerProvider.notifier)
+          .setDisplayName('Private draft');
+      firstSubscription.close();
+      await container.pump();
+
+      session.signOut();
+      session.authenticate(
+        accessToken: 'different-memory-token',
+        userId: 'user-two',
+        isProfileComplete: false,
+      );
+      final secondSubscription = container.listen(
+        profileControllerProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      addTearDown(secondSubscription.close);
+
+      expect(
+        container.read(profileControllerProvider).draft,
+        const ProfileDraft(),
+      );
+      expect(
+        container.read(profileControllerProvider).draft.toInput().toString(),
+        isNot(contains('different-memory-token')),
+      );
+    },
+  );
+
   test('explicit discard clears the retained draft', () async {
     final session = AuthSessionController(
       AuthSession.authenticated(
         accessToken: 'memory-token',
+        userId: 'discard-user',
         isProfileComplete: false,
       ),
     );

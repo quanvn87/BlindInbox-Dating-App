@@ -79,6 +79,23 @@ void main() {
     );
   });
 
+  testWidgets('hometown exposes province choices without district or ward', (
+    tester,
+  ) async {
+    final harness = await _pumpOnboarding(tester);
+    addTearDown(harness.dispose);
+
+    expect(
+      find.byKey(const ValueKey('hometown-location-province')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('hometown-location-district')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('hometown-location-ward')), findsNothing);
+  });
+
   testWidgets('submit stays disabled until every required field is complete', (
     tester,
   ) async {
@@ -301,6 +318,7 @@ Future<_Harness> _pumpOnboarding(
   final session = AuthSessionController(
     AuthSession.authenticated(
       accessToken: 'memory-access-token',
+      userId: 'onboarding-user',
       isProfileComplete: false,
     ),
   );
