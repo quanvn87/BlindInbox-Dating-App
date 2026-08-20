@@ -15,11 +15,13 @@ The API owns authentication and profile invariants. Flutter consumes the version
 
 Install Node.js 24, Flutter 3.47, Android tooling, and Oracle XE 21c. Then follow [Windows development setup](docs/development/windows-setup.md) to bootstrap `XEPDB1`, create the ignored `.env`, migrate the DEV schema, and launch the API and emulator.
 
-After local Oracle aliases are configured, run the complete gate from the repository root or any other directory:
+After local Oracle aliases are configured, run the complete gate from the repository root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\check.ps1
 ```
+
+From another directory, use the absolute path to `scripts\check.ps1`; see the Windows setup guide for the API/mobile two-terminal workflow.
 
 ## Common commands
 
@@ -27,7 +29,7 @@ API commands run in `apps/api`:
 
 ```powershell
 npm.cmd ci
-npm.cmd run migrate
+npm.cmd run migrate:dev
 npm.cmd run start:dev
 npm.cmd run lint
 npm.cmd run build

@@ -37,36 +37,30 @@ Edit the ignored `apps/api/.env`. Keep the aliases separate:
 
 - `ORACLE_USER`, `ORACLE_PASSWORD`, and `ORACLE_CONNECT_STRING` target `SLOW_DATING_DEV` in `XEPDB1`.
 - `ORACLE_TEST_USER`, `ORACLE_TEST_PASSWORD`, and `ORACLE_TEST_CONNECT_STRING` target only `SLOW_DATING_TEST` in `XEPDB1`.
+- The two local Oracle passwords must each be 12-128 characters using only `A-Z`, `a-z`, `0-9`, underscore, or hyphen. This intentionally excludes quotes, whitespace, and SQL metacharacters so SQL*Plus bootstrap argument interpolation is deterministic.
 - `JWT_ACCESS_SECRET`, `OTP_PEPPER`, and `REFRESH_TOKEN_PEPPER` must each be at least 32 characters and must be local development values, never production secrets.
 
 Do not commit `.env`, paste its values into issue trackers, or reuse production credentials locally.
 
 ## Bootstrap XEPDB1 users
 
-The bootstrap is idempotent: it creates or updates the two local schema users, grants only the required development privileges, and gives them quota on `USERS`. Run SQL*Plus as a local Oracle administrator. The following prompt keeps passwords out of shell history and process arguments:
+The bootstrap is idempotent: it creates or updates the two local schema users, grants only the required development privileges, and gives them quota on `USERS`. Run it as a local Oracle administrator. The wrapper prompts without echoing values, validates the conservative password policy before invoking SQL*Plus, and stops on a nonzero SQL*Plus result:
 
 ```powershell
-$devSecure = Read-Host 'SLOW_DATING_DEV password' -AsSecureString
-$testSecure = Read-Host 'SLOW_DATING_TEST password' -AsSecureString
-$devPassword = [Net.NetworkCredential]::new('', $devSecure).Password
-$testPassword = [Net.NetworkCredential]::new('', $testSecure).Password
-$bootstrap = (Resolve-Path 'infra/oracle/bootstrap/001_create_local_users.sql').Path
-$sql = "@`"$bootstrap`" `"$devPassword`" `"$testPassword`"`n"
-$sql | sqlplus.exe -s '/ as sysdba'
-Remove-Variable devPassword, testPassword, sql
+Set-Location D:\path\to\slow-dating
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\bootstrap-local-oracle.ps1
 ```
 
 Use the same two selected passwords in the corresponding ignored `.env` aliases. The script switches the administrator session to `XEPDB1`; do not create these users in the root container.
 
 ## Apply migrations
 
-The migration command always targets the current `ORACLE_USER`/`ORACLE_PASSWORD`/`ORACLE_CONNECT_STRING`. With the default `.env`, that is `SLOW_DATING_DEV`:
+The guarded DEV migration requires `NODE_ENV=development`, a configured `SLOW_DATING_DEV` user, and an Oracle session whose `USER` and `CURRENT_SCHEMA` are both `SLOW_DATING_DEV`. With the default `.env`, run it twice to confirm the no-op path:
 
 ```powershell
-Push-Location apps/api
-npm.cmd run migrate
-npm.cmd run migrate
-Pop-Location
+Set-Location D:\path\to\slow-dating
+npm.cmd --prefix .\apps\api run migrate:dev
+npm.cmd --prefix .\apps\api run migrate:dev
 ```
 
 The second invocation is a no-op. A nonzero exit indicates invalid configuration, an unreachable database, or a migration failure. The CLI intentionally does not print connection details or credentials.
@@ -74,21 +68,24 @@ The second invocation is a no-op. A nonzero exit indicates invalid configuration
 Oracle integration and end-to-end tests load only the explicit TEST aliases, remap them to the application configuration inside the test process, and apply the same migrations:
 
 ```powershell
-Push-Location apps/api
-npm.cmd run test:integration
-npm.cmd run test:e2e
-Pop-Location
+Set-Location D:\path\to\slow-dating
+npm.cmd --prefix .\apps\api run test:integration
+npm.cmd --prefix .\apps\api run test:e2e
 ```
 
 Never point the TEST aliases at `SLOW_DATING_DEV`: the test suites delete and replace test-owned rows. CI does not receive Oracle credentials and runs only the database-independent unit suite.
 
 If the development API reports `ORA-00942`, rerun `npm.cmd run migrate` with the DEV aliases active. Do not solve it by pointing development at the TEST schema.
 
-## Start the API
+## Start the API and Android app
+
+Use two terminals so the API remains running while Flutter attaches to the emulator. In both terminals, first enter the repository root.
+
+### Terminal 1: API
 
 ```powershell
-Push-Location apps/api
-npm.cmd run start:dev
+Set-Location D:\path\to\slow-dating
+npm.cmd --prefix .\apps\api run start:dev
 ```
 
 The default API is available at `http://localhost:3000/v1`. Check liveness at `http://localhost:3000/v1/health/live` and Oracle readiness at `http://localhost:3000/v1/health/ready`.
@@ -97,27 +94,38 @@ In `NODE_ENV=development`, requesting a sign-in code writes one `Development OTP
 
 Stop the API with `Ctrl+C` when finished so no background process or OTP console remains.
 
-## Start the Android app
+### Terminal 2: Android app
 
-Start an Android Virtual Device, confirm its identifier with `flutter devices`, and run:
+Start an Android Virtual Device, confirm its identifier with `flutter devices`, then in Terminal 2 run:
 
 ```powershell
-Push-Location apps/mobile
+Set-Location D:\path\to\slow-dating
+Set-Location .\apps\mobile
 flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000/v1
-Pop-Location
 ```
 
 `10.0.2.2` is the Android emulator route to the Windows host. Use `http://localhost:3000/v1` for Windows, web, or tests running directly on the host. Sign in, complete an 18+ profile, then stop and relaunch the app to verify refresh-session and Oracle-backed profile restoration.
 
 ## Run the local quality gate
 
-The gate derives the repository root from its own location, so it can be launched from any working directory:
+The gate derives the repository root from its own location. From any directory, pass its absolute path; from the repository root, the root-relative form is valid:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\path\to\slow-dating\scripts\check.ps1
+# Or, after: Set-Location D:\path\to\slow-dating
+powershell -ExecutionPolicy Bypass -File .\scripts\check.ps1
 ```
 
-It stops on the first failure and runs API lint/build/unit tests, DEV migration, TEST Oracle integration/e2e, OpenAPI drift, Flutter format/analyze/tests, and an Android debug build.
+It stops on the first failure and runs API lint/build/unit tests, guarded DEV migration, TEST Oracle integration/e2e (each destructive cleanup checks the canonical TEST session schema), OpenAPI drift, Flutter format/analyze/tests, and an Android debug build.
+
+If Flutter reports that it cannot open its SDK cache lockfile, do not change SDK permissions from another account. Sign in as the Windows account that owns the Flutter SDK, enter the repository root, and rerun the Flutter checks there:
+
+```powershell
+Set-Location D:\path\to\slow-dating
+flutter doctor -v
+Set-Location .\apps\mobile
+flutter test
+```
 
 ## Service boundary note
 

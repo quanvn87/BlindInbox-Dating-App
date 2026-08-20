@@ -6,6 +6,10 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { MigrationRunner } from './../src/common/database/migration-runner';
+import {
+  assertOracleServiceSchema,
+  TEST_ORACLE_SCHEMA,
+} from './../src/common/database/oracle-schema.guard';
 import { OracleService } from './../src/common/database/oracle.service';
 
 const PROFILE_TABLES_IN_DROP_ORDER = [
@@ -14,31 +18,14 @@ const PROFILE_TABLES_IN_DROP_ORDER = [
   'PROFILE_INTERESTED_GENDERS',
   'PROFILES',
 ] as const;
-const CANONICAL_TEST_SCHEMA = 'SLOW_DATING_TEST';
 
 async function resetProfileMigration(oracleService: OracleService) {
+  await assertOracleServiceSchema(
+    oracleService,
+    TEST_ORACLE_SCHEMA,
+    'TEST profile migration reset',
+  );
   await oracleService.withTransaction(async (connection) => {
-    const targetResult = await connection.execute<{
-      SESSION_USER: string;
-      CURRENT_SCHEMA: string;
-    }>(
-      `SELECT USER AS session_user,
-              SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AS current_schema
-       FROM dual`,
-      [],
-      { outFormat: oracledb.OUT_FORMAT_OBJECT },
-    );
-    const target = targetResult.rows?.[0];
-    if (
-      process.env.ORACLE_TEST_USER?.toUpperCase() !== CANONICAL_TEST_SCHEMA ||
-      target?.SESSION_USER !== CANONICAL_TEST_SCHEMA ||
-      target.CURRENT_SCHEMA !== CANONICAL_TEST_SCHEMA
-    ) {
-      throw new Error(
-        `Refusing to reset profile migration outside ${CANONICAL_TEST_SCHEMA}`,
-      );
-    }
-
     const tablesResult = await connection.execute<{ TABLE_NAME: string }>(
       `SELECT table_name
        FROM user_tables

@@ -7,6 +7,10 @@ import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
 import { MigrationRunner } from './../src/common/database/migration-runner';
+import {
+  assertOracleServiceSchema,
+  TEST_ORACLE_SCHEMA,
+} from './../src/common/database/oracle-schema.guard';
 import { OracleService } from './../src/common/database/oracle.service';
 import { OracleAuthRepository } from './../src/modules/auth/oracle-auth.repository';
 import { TokenService } from './../src/modules/auth/token.service';
@@ -284,6 +288,11 @@ describe('Profile API (e2e)', () => {
   }
 
   async function clearProfileAndAuthData(): Promise<void> {
+    await assertOracleServiceSchema(
+      oracleService,
+      TEST_ORACLE_SCHEMA,
+      'TEST cleanup',
+    );
     await oracleService.withTransaction(async (connection) => {
       await connection.execute('DELETE FROM profile_prompt_answers');
       await connection.execute('DELETE FROM profile_connection_intents');

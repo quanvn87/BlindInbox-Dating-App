@@ -1,5 +1,10 @@
 import { MigrationRunner } from './common/database/migration-runner';
-import { migrate, runMigrationCli, type MigrationContext } from './migrate';
+import {
+  migrateDevelopmentSchema,
+  migrate,
+  runMigrationCli,
+  type MigrationContext,
+} from './migrate';
 
 describe('Oracle migration CLI', () => {
   it('runs migrations through MigrationRunner and closes the context', async () => {
@@ -46,5 +51,41 @@ describe('Oracle migration CLI', () => {
     expect(JSON.stringify(reportError.mock.calls)).not.toContain(
       'do-not-print',
     );
+  });
+
+  it('rejects a non-development environment before migrating', async () => {
+    const close = jest.fn().mockResolvedValue(undefined);
+    const context = {
+      get: jest.fn(),
+      close,
+    } as unknown as MigrationContext;
+
+    await expect(
+      migrateDevelopmentSchema(() => Promise.resolve(context), {
+        getOrThrow: jest.fn((key: string) =>
+          key === 'NODE_ENV' ? 'test' : 'SLOW_DATING_DEV',
+        ),
+      }),
+    ).rejects.toThrow('DEV migration requires NODE_ENV=development');
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a TEST Oracle user before migrating DEV', async () => {
+    const run = jest.fn();
+    const close = jest.fn().mockResolvedValue(undefined);
+    const context = {
+      get: jest.fn().mockReturnValue({ run }),
+      close,
+    } as unknown as MigrationContext;
+
+    await expect(
+      migrateDevelopmentSchema(() => Promise.resolve(context), {
+        getOrThrow: jest.fn((key: string) =>
+          key === 'NODE_ENV' ? 'development' : 'SLOW_DATING_TEST',
+        ),
+      }),
+    ).rejects.toThrow('DEV migration requires the SLOW_DATING_DEV Oracle user');
+    expect(run).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });
