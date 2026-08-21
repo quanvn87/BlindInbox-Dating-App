@@ -7,6 +7,7 @@ void main() {
   const securePreferenceFiles = <String>{
     'FlutterSecureStorage.xml',
     'FlutterSecureKeyStorage.xml',
+    'FlutterSecureStorageConfiguration.xml',
   };
 
   test('Android backup rules exclude flutter_secure_storage preferences', () {
@@ -50,17 +51,17 @@ void main() {
 
     expect(
       RegExp(r'<exclude\b[^>]*>').allMatches(cloudBackup),
-      hasLength(2),
+      hasLength(3),
       reason: 'Only secure-storage preferences should be excluded from cloud backup.',
     );
     expect(
       RegExp(r'<exclude\b[^>]*>').allMatches(deviceTransfer),
-      hasLength(2),
+      hasLength(3),
       reason: 'Only secure-storage preferences should be excluded.',
     );
     expect(
       RegExp(r'<exclude\b[^>]*>').allMatches(legacyRules),
-      hasLength(2),
+      hasLength(3),
       reason: 'Only secure-storage preferences should be excluded.',
     );
   });
