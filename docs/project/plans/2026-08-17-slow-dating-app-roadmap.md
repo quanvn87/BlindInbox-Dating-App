@@ -23,7 +23,7 @@
 
 ## Plan 1 — Foundation, Auth, Profile and Preferences
 
-**File:** `docs/superpowers/plans/2026-08-18-foundation-auth-profile.md`
+**File:** `docs/project/plans/2026-08-18-foundation-auth-profile.md`
 
 **Deliverable:** Hai client Android có thể đăng nhập bằng development OTP qua backend thật, lưu phiên an toàn, khai hồ sơ 18+, giới tính bản thân, giới tính muốn kết nối, mục đích kết nối và khu vực hành chính trong Oracle XE.
 
@@ -31,7 +31,7 @@
 
 ## Plan 2 — Search, GPS, Matching and Proposals
 
-**File dự kiến:** `docs/superpowers/plans/2026-08-18-matching-proposals.md`
+**File dự kiến:** `docs/project/plans/2026-08-18-matching-proposals.md`
 
 **Deliverable:** Hàng chờ tự động, GPS snapshot 24 giờ, lọc hai chiều, tối đa ba thẻ/ngày, quẹt trái/phải, lời mở đầu và đề xuất chờ tối đa 72 giờ.
 
@@ -39,7 +39,7 @@
 
 ## Plan 3 — Realtime Chat State Machine
 
-**File dự kiến:** `docs/superpowers/plans/2026-08-18-chat-state-machine.md`
+**File dự kiến:** `docs/project/plans/2026-08-18-chat-state-machine.md`
 
 **Deliverable:** MongoDB replica set, REST recovery, WebSocket realtime, idempotent message send và toàn bộ phase 10 → 30 → 50 với fake clock.
 
@@ -47,7 +47,7 @@
 
 ## Plan 4 — Media, Safety, Moderation and Notifications
 
-**File dự kiến:** `docs/superpowers/plans/2026-08-18-safety-media-notifications.md`
+**File dự kiến:** `docs/project/plans/2026-08-18-safety-media-notifications.md`
 
 **Deliverable:** Object storage, media scanning pipeline, block/report, moderator UI tối thiểu, anti-contact/anti-scam rules, push abstraction và outbox đồng bộ.
 
@@ -55,7 +55,7 @@
 
 ## Plan 5 — Privacy, Load, Recovery and Android Release Candidate
 
-**File dự kiến:** `docs/superpowers/plans/2026-08-18-hardening-release.md`
+**File dự kiến:** `docs/project/plans/2026-08-18-hardening-release.md`
 
 **Deliverable:** Xóa/anonymize, retention 90 ngày, backup/restore drill, load test 1.000 WebSocket, security test, Android release candidate và build validation web/Windows/iOS source compatibility.
 

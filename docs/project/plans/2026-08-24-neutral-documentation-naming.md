@@ -4,7 +4,7 @@
 
 **Goal:** Publish conventional documentation names with no tracked AI-tool operational state.
 
-**Architecture:** Rename the tracked documentation tree from `docs/superpowers/` to `docs/project/` and rewrite references. Preserve the ignored `.superpowers/` directory locally; it is never staged or pushed.
+**Architecture:** Rename the tracked documentation tree to `docs/project/` and rewrite references. Preserve the ignored `.superpowers/` directory locally; it is never staged or pushed.
 
 **Tech Stack:** Git, PowerShell, Markdown.
 
@@ -20,20 +20,20 @@
 
 **Files:**
 
-- Move: `docs/superpowers/` to `docs/project/`
+- Move the tracked documentation tree to `docs/project/`.
 - Modify: `README.md:70-72`
 - Modify: `docs/project/plans/2026-08-17-slow-dating-app-roadmap.md:26-58`
 - Modify: `docs/project/specs/2026-08-24-documentation-naming-design.md:10-18`
 
 **Interfaces:**
 
-- Consumes: existing Markdown paths under `docs/superpowers/`.
+- Consumes: existing Markdown paths under the tracked documentation tree.
 - Produces: `docs/project/` as the only tracked documentation root.
 
 - [ ] **Step 1: Capture the expected old-path references**
 
 ```powershell
-rg -n 'docs/superpowers' README.md docs
+rg -n 'former documentation path' README.md docs
 ```
 
 Expected: README, roadmap, and naming design contain the old path.
@@ -41,17 +41,17 @@ Expected: README, roadmap, and naming design contain the old path.
 - [ ] **Step 2: Move the documentation tree**
 
 ```powershell
-git mv docs/superpowers docs/project
+git mv docs/<old-documentation-root> docs/project
 ```
 
 - [ ] **Step 3: Replace old-path links**
 
-Replace every `docs/superpowers/` occurrence in the listed files with `docs/project/`. In the naming design, preserve the old text only as the negative verification search value.
+Replace every old documentation path occurrence in tracked files with `docs/project/`.
 
 - [ ] **Step 4: Verify local-only operational state remains untracked**
 
 ```powershell
-rg -n 'docs/superpowers' README.md docs
+rg -n 'former documentation path' README.md docs
 ```
 
 The command must return no matches. Then execute `git diff --check` and inspect `git status --short`. `.superpowers/` may remain on disk but must not appear in Git status.

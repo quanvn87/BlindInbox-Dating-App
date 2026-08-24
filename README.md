@@ -67,8 +67,8 @@ GitHub Actions deliberately runs no Oracle-dependent test: it checks API lint/bu
 
 ## Project documents
 
-- [Product and architecture design](docs/superpowers/specs/2026-08-14-slow-dating-messaging-app-design.md)
-- [Foundation/auth/profile implementation plan](docs/superpowers/plans/2026-08-18-foundation-auth-profile.md)
-- [Project roadmap](docs/superpowers/plans/2026-08-17-slow-dating-app-roadmap.md)
+- [Product and architecture design](docs/project/specs/2026-08-14-slow-dating-messaging-app-design.md)
+- [Foundation/auth/profile implementation plan](docs/project/plans/2026-08-18-foundation-auth-profile.md)
+- [Project roadmap](docs/project/plans/2026-08-17-slow-dating-app-roadmap.md)
 - [Windows setup and operations](docs/development/windows-setup.md)
 - [Generated OpenAPI contract](docs/openapi/slow-dating-v1.json)
