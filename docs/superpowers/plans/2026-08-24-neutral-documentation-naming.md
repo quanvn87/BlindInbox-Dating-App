@@ -4,7 +4,7 @@
 
 **Goal:** Publish conventional documentation names with no tracked AI-tool operational state.
 
-**Architecture:** Rename the tracked documentation tree from `docs/superpowers/` to `docs/project/`; rewrite references; remove the ignored `.superpowers/` directory locally only.
+**Architecture:** Rename the tracked documentation tree from `docs/superpowers/` to `docs/project/` and rewrite references. Preserve the ignored `.superpowers/` directory locally; it is never staged or pushed.
 
 **Tech Stack:** Git, PowerShell, Markdown.
 
@@ -12,7 +12,7 @@
 
 - Preserve all existing specifications and plans.
 - Do not change application source, dependencies, environment files, or database assets.
-- Never stage `.superpowers/`.
+- Preserve `.superpowers/` locally and never stage it.
 
 ---
 
@@ -48,13 +48,13 @@ git mv docs/superpowers docs/project
 
 Replace every `docs/superpowers/` occurrence in the listed files with `docs/project/`. In the naming design, preserve the old text only as the negative verification search value.
 
-- [ ] **Step 4: Verify and clean local-only operational state**
+- [ ] **Step 4: Verify local-only operational state remains untracked**
 
 ```powershell
 rg -n 'docs/superpowers' README.md docs
 ```
 
-The command must return no matches. Then execute `git diff --check`; remove `.superpowers/` with PowerShell `Remove-Item -LiteralPath .superpowers -Recurse -Force` only if it exists; and inspect `git status --short`.
+The command must return no matches. Then execute `git diff --check` and inspect `git status --short`. `.superpowers/` may remain on disk but must not appear in Git status.
 
 - [ ] **Step 5: Commit**
 
