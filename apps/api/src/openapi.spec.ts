@@ -10,6 +10,7 @@ import {
   createOpenApiDocument,
   formatOpenApiCliError,
   OPENAPI_OUTPUT_PATH,
+  runOpenApiCli,
   serializeOpenApiDocument,
 } from './openapi';
 
@@ -383,6 +384,22 @@ describe('OpenAPI contract', () => {
     expect(formatOpenApiCliError(error)).toContain(
       'Error: configuration failed',
     );
+  });
+
+  it('reports an OpenAPI CLI failure to stderr and returns an error exit code', async () => {
+    const error = new Error('module initialization failed');
+    const write = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+
+    await expect(runOpenApiCli(() => Promise.reject(error))).resolves.toBe(1);
+
+    expect(write).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'OpenAPI generation failed: Error: module initialization failed',
+      ),
+    );
+    write.mockRestore();
   });
 
   it('matches the checked-in generated OpenAPI artifact', async () => {

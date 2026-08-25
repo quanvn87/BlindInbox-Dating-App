@@ -4,8 +4,6 @@ import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-import { AppModule } from './app.module';
-
 export const OPENAPI_OUTPUT_PATH = resolve(
   __dirname,
   '../../../docs/openapi/slow-dating-v1.json',
@@ -27,6 +25,9 @@ export async function createOpenApiDocument(): Promise<OpenAPIObject> {
   let app: INestApplication | undefined;
 
   try {
+    const { AppModule } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('./app.module') as typeof import('./app.module');
     app = await NestFactory.create(AppModule, { logger: false });
     app.setGlobalPrefix('v1');
 
@@ -86,6 +87,18 @@ export function formatOpenApiCliError(error: unknown): string {
   return `OpenAPI generation failed: ${String(error)}`;
 }
 
+export async function runOpenApiCli(
+  generateDocument: () => Promise<void> = writeOpenApiDocument,
+): Promise<number> {
+  try {
+    await generateDocument();
+    return 0;
+  } catch (error: unknown) {
+    process.stderr.write(`${formatOpenApiCliError(error)}\n`);
+    return 1;
+  }
+}
+
 export async function writeOpenApiDocument(): Promise<void> {
   const document = await createOpenApiDocument();
   await mkdir(dirname(OPENAPI_OUTPUT_PATH), { recursive: true });
@@ -132,8 +145,7 @@ function supplyDocumentEnvironment(): () => void {
 }
 
 if (require.main === module) {
-  void writeOpenApiDocument().catch((error: unknown) => {
-    process.stderr.write(`${formatOpenApiCliError(error)}\n`);
-    process.exitCode = 1;
+  void runOpenApiCli().then((exitCode) => {
+    process.exitCode = exitCode;
   });
 }
