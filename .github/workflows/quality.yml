@@ -34,7 +34,7 @@ jobs:
       - name: Run database-independent unit tests
         run: npm run test:unit -- --runInBand
       - name: Check deterministic OpenAPI contract
-        run: npm run openapi:check
+        run: npm run openapi:check:compiled
 
   mobile:
     name: Flutter
