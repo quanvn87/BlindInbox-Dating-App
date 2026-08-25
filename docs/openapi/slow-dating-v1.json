@@ -1,0 +1,800 @@
+{
+  "components": {
+    "schemas": {
+      "AuthTokens": {
+        "additionalProperties": false,
+        "properties": {
+          "accessExpiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshExpiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "accessExpiresAt",
+          "refreshToken",
+          "refreshExpiresAt"
+        ],
+        "type": "object"
+      },
+      "ConnectionIntentCatalogOption": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "CASUAL_CONVERSATION",
+              "FRIENDSHIP",
+              "LONG_TERM_DATING",
+              "SHORT_TERM_DATING",
+              "OPEN_TO_EXPLORE"
+            ],
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "GenderCatalogOption": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "MAN",
+              "WOMAN",
+              "NON_BINARY",
+              "SELF_DESCRIBED"
+            ],
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "LocationOption": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "level": {
+            "enum": [
+              "PROVINCE",
+              "DISTRICT",
+              "WARD"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentCode": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "level",
+          "parentCode",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "LogoutDto": {
+        "additionalProperties": false,
+        "properties": {
+          "refreshToken": {
+            "description": "Must be a non-empty opaque token. It is used exactly as supplied and is neither trimmed nor normalized.",
+            "maxLength": 2048,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "OtpRequestResult": {
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "expiresAt"
+        ],
+        "type": "object"
+      },
+      "ProfileCatalog": {
+        "additionalProperties": false,
+        "properties": {
+          "connectionIntents": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectionIntentCatalogOption"
+            },
+            "type": "array"
+          },
+          "genders": {
+            "items": {
+              "$ref": "#/components/schemas/GenderCatalogOption"
+            },
+            "type": "array"
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/LocationOption"
+            },
+            "type": "array"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ProfilePrompt"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "genders",
+          "connectionIntents",
+          "locations",
+          "prompts"
+        ],
+        "type": "object"
+      },
+      "ProfileInput": {
+        "additionalProperties": false,
+        "properties": {
+          "bio": {
+            "maxLength": 500,
+            "type": "string"
+          },
+          "birthDate": {
+            "description": "UTC calendar date (YYYY-MM-DD) with a positive year; the server requires age >=18 using the UTC calendar date.",
+            "format": "date",
+            "pattern": "^(?!0000)\\d{4}-\\d{2}-\\d{2}$",
+            "type": "string"
+          },
+          "connectionIntents": {
+            "items": {
+              "description": "Must be a currently active connection intent code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
+              "enum": [
+                "CASUAL_CONVERSATION",
+                "FRIENDSHIP",
+                "LONG_TERM_DATING",
+                "SHORT_TERM_DATING",
+                "OPEN_TO_EXPLORE"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "displayName": {
+            "description": "Must contain at least 2 nonblank characters after trimming; maximum 50 characters.",
+            "maxLength": 50,
+            "minLength": 2,
+            "type": "string"
+          },
+          "favoriteSongArtist": {
+            "description": "Both favoriteSongTitle and favoriteSongArtist must be null, or both must be present and nonblank.",
+            "nullable": true,
+            "type": "string"
+          },
+          "favoriteSongTitle": {
+            "description": "Both favoriteSongTitle and favoriteSongArtist must be null, or both must be present and nonblank.",
+            "nullable": true,
+            "type": "string"
+          },
+          "genderIdentity": {
+            "description": "Must be a currently active gender code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
+            "enum": [
+              "MAN",
+              "WOMAN",
+              "NON_BINARY",
+              "SELF_DESCRIBED"
+            ],
+            "type": "string"
+          },
+          "genderLabel": {
+            "description": "When genderIdentity is SELF_DESCRIBED, this is required and must be nonblank; otherwise it must be null.",
+            "maxLength": 50,
+            "minLength": 2,
+            "nullable": true,
+            "type": "string"
+          },
+          "heightCm": {
+            "maximum": 250,
+            "minimum": 100,
+            "nullable": true,
+            "type": "integer"
+          },
+          "homeLocationCode": {
+            "description": "Must be a nonblank active catalog location code.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "hometownLocationCode": {
+            "description": "When present, must be nonblank and match a currently active PROVINCE-level location code returned by GET /v1/catalog/profile-options. The live catalog is checked; this is not a static enum.",
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "interestedInGenders": {
+            "items": {
+              "description": "Must be a currently active gender code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
+              "enum": [
+                "MAN",
+                "WOMAN",
+                "NON_BINARY",
+                "SELF_DESCRIBED"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "promptAnswers": {
+            "description": "promptCode values must be unique; prompt codes and answers must be nonblank.",
+            "items": {
+              "$ref": "#/components/schemas/ProfilePromptAnswer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "displayName",
+          "birthDate",
+          "genderIdentity",
+          "genderLabel",
+          "interestedInGenders",
+          "connectionIntents",
+          "heightCm",
+          "hometownLocationCode",
+          "homeLocationCode",
+          "bio",
+          "favoriteSongTitle",
+          "favoriteSongArtist",
+          "promptAnswers"
+        ],
+        "type": "object"
+      },
+      "ProfilePrompt": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "text",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "ProfilePromptAnswer": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "description": "Must be nonblank after trimming.",
+            "maxLength": 280,
+            "minLength": 1,
+            "type": "string"
+          },
+          "promptCode": {
+            "description": "Must be nonblank and unique within promptAnswers. It must be a currently active prompt code returned by GET /v1/catalog/profile-options; enum membership alone does not guarantee current activity.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "promptCode",
+          "answer"
+        ],
+        "type": "object"
+      },
+      "RefreshTokenDto": {
+        "additionalProperties": false,
+        "properties": {
+          "refreshToken": {
+            "description": "Must be a non-empty opaque token. It is used exactly as supplied and is neither trimmed nor normalized.",
+            "maxLength": 2048,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "RequestOtpDto": {
+        "additionalProperties": false,
+        "properties": {
+          "phone": {
+            "description": "Must be nonblank after trimming and parse as a valid Vietnamese phone number without an extension. National or E.164 input is accepted and normalized to Vietnamese E.164 before use.",
+            "example": "+84901234567",
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "type": "object"
+      },
+      "VerifyOtpDto": {
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "description": "OTP challenge identifier returned by the request endpoint.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "code": {
+            "description": "Exactly six ASCII digits; whitespace is not trimmed.",
+            "pattern": "^\\d{6}$",
+            "type": "string"
+          },
+          "deviceName": {
+            "description": "Must be nonblank after trimming.",
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code",
+          "deviceName"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "Authentication and profile API contract",
+    "title": "Slow Dating API",
+    "version": "1.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Session revoked"
+          },
+          "400": {
+            "description": "Invalid request or idempotency key"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/otp/request": {
+      "post": {
+        "operationId": "AuthController_requestOtp",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpRequestResult"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid request or idempotency key"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/otp/verify": {
+      "post": {
+        "operationId": "AuthController_verifyOtp",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokens"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid or expired OTP"
+          },
+          "403": {
+            "description": "Account is inactive"
+          },
+          "409": {
+            "description": "OTP challenge was already consumed"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokens"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid request or idempotency key"
+          },
+          "401": {
+            "description": "Refresh token is invalid"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/catalog/profile-options": {
+      "get": {
+        "operationId": "ProfileController_getCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileCatalog"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/v1/health/live": {
+      "get": {
+        "operationId": "HealthController_getLiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "ok"
+                      ],
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "timestamp"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_getReadiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "oracle": {
+                      "enum": [
+                        "up"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ready"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "oracle"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "description": "Oracle is unavailable"
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/me/profile": {
+      "get": {
+        "operationId": "ProfileController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "description": "Bearer access token is invalid"
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      },
+      "put": {
+        "operationId": "ProfileController_upsertProfile",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Profile or idempotency key is invalid"
+          },
+          "401": {
+            "description": "Bearer access token is invalid"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    }
+  },
+  "servers": [],
+  "tags": []
+}
