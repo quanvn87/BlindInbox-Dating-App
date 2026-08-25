@@ -78,6 +78,14 @@ export function serializeOpenApiDocument(document: OpenAPIObject): string {
   return `${JSON.stringify(sortKeys(document), null, 2)}\n`;
 }
 
+export function formatOpenApiCliError(error: unknown): string {
+  if (error instanceof Error) {
+    return `OpenAPI generation failed: ${error.name}: ${error.message}\n${error.stack ?? error.message}`;
+  }
+
+  return `OpenAPI generation failed: ${String(error)}`;
+}
+
 export async function writeOpenApiDocument(): Promise<void> {
   const document = await createOpenApiDocument();
   await mkdir(dirname(OPENAPI_OUTPUT_PATH), { recursive: true });
@@ -125,7 +133,7 @@ function supplyDocumentEnvironment(): () => void {
 
 if (require.main === module) {
   void writeOpenApiDocument().catch((error: unknown) => {
-    console.error(error);
+    process.stderr.write(`${formatOpenApiCliError(error)}\n`);
     process.exitCode = 1;
   });
 }

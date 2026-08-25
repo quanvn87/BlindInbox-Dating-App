@@ -8,6 +8,7 @@ import { readFile } from 'node:fs/promises';
 
 import {
   createOpenApiDocument,
+  formatOpenApiCliError,
   OPENAPI_OUTPUT_PATH,
   serializeOpenApiDocument,
 } from './openapi';
@@ -370,6 +371,17 @@ describe('OpenAPI contract', () => {
     expect(first.endsWith('\n')).toBe(true);
     expect(first.indexOf('"components"')).toBeLessThan(
       first.indexOf('"openapi"'),
+    );
+  });
+
+  it('formats OpenAPI CLI errors with diagnostic stack context', () => {
+    const error = new Error('configuration failed');
+
+    expect(formatOpenApiCliError(error)).toContain(
+      'OpenAPI generation failed: Error: configuration failed',
+    );
+    expect(formatOpenApiCliError(error)).toContain(
+      'Error: configuration failed',
     );
   });
 
