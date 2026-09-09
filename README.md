@@ -1,6 +1,6 @@
-# Slow Dating
+# BlindInbox
 
-Slow Dating is an 18+ Flutter and NestJS application. This repository currently implements the first vertical slice: development OTP authentication, revocable sessions, inclusive profile onboarding, and Oracle-backed profile persistence. Matching, chat, media, and production identity verification are intentionally out of scope.
+BlindInbox is an 18+ Flutter and NestJS application. This repository currently implements the first vertical slice: development OTP authentication, revocable sessions, inclusive profile onboarding, and Oracle-backed profile persistence. Matching, chat, media, and production identity verification are intentionally out of scope.
 
 ## Architecture
 
@@ -71,4 +71,4 @@ GitHub Actions deliberately runs no Oracle-dependent test: it checks API lint/bu
 - [Foundation/auth/profile implementation plan](docs/project/plans/2026-08-18-foundation-auth-profile.md)
 - [Project roadmap](docs/project/plans/2026-08-17-slow-dating-app-roadmap.md)
 - [Windows setup and operations](docs/development/windows-setup.md)
-- [Generated OpenAPI contract](docs/openapi/slow-dating-v1.json)
+- [Generated OpenAPI contract](docs/openapi/blindinbox-v1.json)

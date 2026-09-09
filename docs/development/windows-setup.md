@@ -47,7 +47,7 @@ Do not commit `.env`, paste its values into issue trackers, or reuse production 
 The bootstrap is idempotent: it creates or updates the two local schema users, grants only the required development privileges, and gives them quota on `USERS`. Run it as a local Oracle administrator. The wrapper prompts without echoing values, validates the conservative password policy, and sends the password definitions through redirected SQL*Plus standard input. Passwords are never process arguments, and captured SQL*Plus output is discarded rather than logged. The wrapper stops on a nonzero SQL*Plus result:
 
 ```powershell
-Set-Location D:\path\to\slow-dating
+Set-Location D:\path\to\blindinbox
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\bootstrap-local-oracle.ps1
 ```
 
@@ -58,7 +58,7 @@ Use the same two selected passwords in the corresponding ignored `.env` aliases.
 The guarded DEV migration requires `NODE_ENV=development`, a configured `SLOW_DATING_DEV` user, and an Oracle session whose `USER` and `CURRENT_SCHEMA` are both `SLOW_DATING_DEV`. With the default `.env`, run it twice to confirm the no-op path:
 
 ```powershell
-Set-Location D:\path\to\slow-dating
+Set-Location D:\path\to\blindinbox
 npm.cmd --prefix .\apps\api run migrate:dev
 npm.cmd --prefix .\apps\api run migrate:dev
 ```
@@ -82,7 +82,7 @@ Use a recovery command only after the runner reports partial migration state. Ba
 Oracle integration and end-to-end tests require the exact `SLOW_DATING_TEST` TEST alias, remap only the explicit TEST credentials inside the test process, and verify connected `USER` and `CURRENT_SCHEMA` before the migration runner or destructive cleanup can execute:
 
 ```powershell
-Set-Location D:\path\to\slow-dating
+Set-Location D:\path\to\blindinbox
 npm.cmd --prefix .\apps\api run test:integration
 npm.cmd --prefix .\apps\api run test:e2e
 ```
@@ -98,7 +98,7 @@ Use two terminals so the API remains running while Flutter attaches to the emula
 ### Terminal 1: API
 
 ```powershell
-Set-Location D:\path\to\slow-dating
+Set-Location D:\path\to\blindinbox
 npm.cmd --prefix .\apps\api run start:dev
 ```
 
@@ -113,7 +113,7 @@ Stop the API with `Ctrl+C` when finished so no background process or OTP console
 Start an Android Virtual Device, confirm its identifier with `flutter devices`, then in Terminal 2 run:
 
 ```powershell
-Set-Location D:\path\to\slow-dating
+Set-Location D:\path\to\blindinbox
 Set-Location .\apps\mobile
 flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000/v1
 ```
@@ -125,8 +125,8 @@ flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000/v1
 The gate derives the repository root from its own location. From any directory, pass its absolute path; from the repository root, the root-relative form is valid:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\path\to\slow-dating\scripts\check.ps1
-# Or, after: Set-Location D:\path\to\slow-dating
+powershell -ExecutionPolicy Bypass -File D:\path\to\blindinbox\scripts\check.ps1
+# Or, after: Set-Location D:\path\to\blindinbox
 powershell -ExecutionPolicy Bypass -File .\scripts\check.ps1
 ```
 
@@ -135,7 +135,7 @@ It stops on the first failure and runs API lint/build/unit tests, guarded DEV mi
 If Flutter reports that it cannot open its SDK cache lockfile, do not change SDK permissions from another account. Sign in as the Windows account that owns the Flutter SDK, enter the repository root, and rerun the Flutter checks there:
 
 ```powershell
-Set-Location D:\path\to\slow-dating
+Set-Location D:\path\to\blindinbox
 flutter doctor -v
 Set-Location .\apps\mobile
 flutter test
@@ -176,16 +176,16 @@ flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000/v1
 Use two distinct Vietnamese development phone numbers that the owner is authorized to use; do not put either number or either OTP in the evidence. For account A, read its development OTP only from Terminal 1, complete a profile with an adult birth date, and confirm the app reaches Home. Quit `flutter run`, then force-stop and relaunch the installed process:
 
 ```powershell
-adb.exe -s emulator-5554 shell am force-stop com.quan.slow_dating
-adb.exe -s emulator-5554 shell monkey -p com.quan.slow_dating -c android.intent.category.LAUNCHER 1
+adb.exe -s emulator-5554 shell am force-stop com.quan.blindinbox
+adb.exe -s emulator-5554 shell monkey -p com.quan.blindinbox -c android.intent.category.LAUNCHER 1
 ```
 
 Confirm account A returns to Home without entering another OTP. This exercises secure refresh-token restoration, refresh rotation, and the authenticated profile fetch. Then clear only this DEV app's local data, relaunch it, and repeat the sign-in/profile/restart check with distinct account B:
 
 ```powershell
-# Destructive only to the emulator's com.quan.slow_dating application data.
-adb.exe -s emulator-5554 shell pm clear com.quan.slow_dating
-adb.exe -s emulator-5554 shell monkey -p com.quan.slow_dating -c android.intent.category.LAUNCHER 1
+# Destructive only to the emulator's com.quan.blindinbox application data.
+adb.exe -s emulator-5554 shell pm clear com.quan.blindinbox
+adb.exe -s emulator-5554 shell monkey -p com.quan.blindinbox -c android.intent.category.LAUNCHER 1
 ```
 
 After account B also returns to Home following the same force-stop/relaunch commands, inspect aggregate DEV state without printing phone numbers, tokens, OTPs, or profile text. SQL*Plus prompts interactively for the local DEV password; do not place it on the command line:

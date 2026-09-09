@@ -1,4 +1,4 @@
-# Thiết kế ứng dụng nhắn tin hẹn hò tìm hiểu chậm
+# Thiết kế ứng dụng BlindInbox
 
 ## 1. Mục tiêu
 

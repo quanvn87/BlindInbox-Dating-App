@@ -1,4 +1,4 @@
-# Slow Dating App Delivery Roadmap
+# BlindInbox App Delivery Roadmap
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement each referenced plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
