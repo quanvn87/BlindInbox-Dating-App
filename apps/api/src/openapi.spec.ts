@@ -21,6 +21,13 @@ describe('OpenAPI contract', () => {
     document = await createOpenApiDocument();
   });
 
+  it('brands the generated contract as BlindInbox', () => {
+    expect(OPENAPI_OUTPUT_PATH.replace(/\\/g, '/')).toContain(
+      'docs/openapi/blindinbox-v1.json',
+    );
+    expect(document.info.title).toBe('BlindInbox API');
+  });
+
   it('publishes every v1 health, auth, catalog, and profile operation', () => {
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining([
