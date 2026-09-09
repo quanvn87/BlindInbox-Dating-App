@@ -403,7 +403,9 @@ describe('OpenAPI contract', () => {
   });
 
   it('matches the checked-in generated OpenAPI artifact', async () => {
-    await expect(readFile(OPENAPI_OUTPUT_PATH, 'utf8')).resolves.toBe(
+    const artifact = await readFile(OPENAPI_OUTPUT_PATH, 'utf8');
+
+    expect(artifact.replace(/\r\n/g, '\n')).toBe(
       serializeOpenApiDocument(document),
     );
   });
