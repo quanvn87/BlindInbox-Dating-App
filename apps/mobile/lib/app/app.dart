@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:blind_inbox/app/router.dart';
 import 'package:blind_inbox/features/auth/presentation/auth_controller.dart';
 
-final class SlowDatingApp extends ConsumerWidget {
-  const SlowDatingApp({super.key});
+final class BlindInboxApp extends ConsumerWidget {
+  const BlindInboxApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

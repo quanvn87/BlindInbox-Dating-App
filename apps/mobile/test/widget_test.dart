@@ -17,7 +17,7 @@ void main() {
             MemorySecureStorageAdapter(),
           ),
         ],
-        child: const SlowDatingApp(),
+        child: const BlindInboxApp(),
       ),
     );
     await tester.pumpAndSettle();

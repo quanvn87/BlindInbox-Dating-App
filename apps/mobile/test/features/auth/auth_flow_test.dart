@@ -28,7 +28,7 @@ void main() {
           profileApiProvider.overrideWithValue(FakeProfileApi()),
           secureStorageAdapterProvider.overrideWithValue(storage),
         ],
-        child: const SlowDatingApp(),
+        child: const BlindInboxApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -85,7 +85,7 @@ void main() {
             MemorySecureStorageAdapter(),
           ),
         ],
-        child: const SlowDatingApp(),
+        child: const BlindInboxApp(),
       ),
     );
     await tester.pumpAndSettle();
