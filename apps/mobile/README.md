@@ -1,4 +1,4 @@
-# slow_dating
+# BlindInbox
 
 A new Flutter project.
 

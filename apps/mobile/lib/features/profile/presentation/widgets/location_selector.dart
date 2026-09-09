@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:slow_dating/features/profile/domain/profile_models.dart';
+import 'package:blind_inbox/features/profile/domain/profile_models.dart';
 
 final class LocationSelector extends StatelessWidget {
   const LocationSelector({

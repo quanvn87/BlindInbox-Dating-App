@@ -1,4 +1,4 @@
-package com.quan.slow_dating
+package com.quan.blindinbox
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slow_dating/core/auth/auth_session.dart';
-import 'package:slow_dating/features/profile/data/profile_api.dart';
-import 'package:slow_dating/features/profile/domain/profile_models.dart';
-import 'package:slow_dating/features/profile/presentation/profile_controller.dart';
+import 'package:blind_inbox/core/auth/auth_session.dart';
+import 'package:blind_inbox/features/profile/data/profile_api.dart';
+import 'package:blind_inbox/features/profile/domain/profile_models.dart';
+import 'package:blind_inbox/features/profile/presentation/profile_controller.dart';
 
 import 'support/fake_profile_api.dart';
 
@@ -230,7 +230,7 @@ void main() {
     test('surfaces the safe under-18 server error and retains draft', () async {
       api.putFailure = const ProfileApiException(
         ProfileApiFailure.underage,
-        'You must be at least 18 years old to use Slow Dating.',
+        'You must be at least 18 years old to use BlindInbox.',
       );
       _completeDraft(controller, birthDate: '2010-01-01');
       final before = controller.state.draft;
@@ -240,7 +240,7 @@ void main() {
       expect(submitted, isFalse);
       expect(
         controller.state.submitError,
-        'You must be at least 18 years old to use Slow Dating.',
+        'You must be at least 18 years old to use BlindInbox.',
       );
       expect(controller.state.draft, before);
       expect(session.value.isProfileComplete, isFalse);

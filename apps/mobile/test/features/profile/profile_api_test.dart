@@ -4,10 +4,10 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slow_dating/core/auth/auth_session.dart';
-import 'package:slow_dating/core/auth/auth_session_store.dart';
-import 'package:slow_dating/features/auth/data/auth_api.dart';
-import 'package:slow_dating/features/profile/data/profile_api.dart';
+import 'package:blind_inbox/core/auth/auth_session.dart';
+import 'package:blind_inbox/core/auth/auth_session_store.dart';
+import 'package:blind_inbox/features/auth/data/auth_api.dart';
+import 'package:blind_inbox/features/profile/data/profile_api.dart';
 
 import '../auth/support/fake_auth_api.dart' show MemorySecureStorageAdapter;
 import 'support/fake_profile_api.dart';

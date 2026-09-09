@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:slow_dating/app/app.dart';
-import 'package:slow_dating/core/auth/auth_session_store.dart';
-import 'package:slow_dating/features/auth/data/auth_api.dart';
-import 'package:slow_dating/features/auth/presentation/otp_screen.dart';
-import 'package:slow_dating/features/profile/data/profile_api.dart';
+import 'package:blind_inbox/app/app.dart';
+import 'package:blind_inbox/core/auth/auth_session_store.dart';
+import 'package:blind_inbox/features/auth/data/auth_api.dart';
+import 'package:blind_inbox/features/auth/presentation/otp_screen.dart';
+import 'package:blind_inbox/features/profile/data/profile_api.dart';
 
 import 'support/fake_auth_api.dart';
 import '../profile/support/fake_profile_api.dart';

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slow_dating/core/auth/auth_session_store.dart';
+import 'package:blind_inbox/core/auth/auth_session_store.dart';
 
 void main() {
   test('persists and reads only the refresh token', () async {

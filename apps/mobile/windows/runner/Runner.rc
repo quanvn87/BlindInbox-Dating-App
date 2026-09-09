@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.quan" "\0"
-            VALUE "FileDescription", "slow_dating" "\0"
+            VALUE "FileDescription", "BlindInbox" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "slow_dating" "\0"
+            VALUE "InternalName", "blind_inbox" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.quan. All rights reserved." "\0"
-            VALUE "OriginalFilename", "slow_dating.exe" "\0"
-            VALUE "ProductName", "slow_dating" "\0"
+            VALUE "OriginalFilename", "blind_inbox.exe" "\0"
+            VALUE "ProductName", "BlindInbox" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:slow_dating/features/profile/data/profile_api.dart';
-import 'package:slow_dating/features/profile/domain/profile_models.dart';
+import 'package:blind_inbox/features/profile/data/profile_api.dart';
+import 'package:blind_inbox/features/profile/domain/profile_models.dart';
 
 final class FakeProfileApi implements ProfileApi {
   ProfileCatalog catalog = testProfileCatalog;
