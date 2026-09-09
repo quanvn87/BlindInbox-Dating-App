@@ -2,11 +2,11 @@ import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:slow_dating/core/api/api_client.dart';
-import 'package:slow_dating/core/auth/auth_session.dart';
-import 'package:slow_dating/core/auth/auth_session_store.dart';
-import 'package:slow_dating/features/auth/data/auth_api.dart';
-import 'package:slow_dating/features/profile/domain/profile_models.dart';
+import 'package:blind_inbox/core/api/api_client.dart';
+import 'package:blind_inbox/core/auth/auth_session.dart';
+import 'package:blind_inbox/core/auth/auth_session_store.dart';
+import 'package:blind_inbox/features/auth/data/auth_api.dart';
+import 'package:blind_inbox/features/profile/domain/profile_models.dart';
 
 abstract interface class ProfileApi {
   Future<ProfileCatalog> getCatalog();
@@ -364,7 +364,7 @@ String generateProfileRefreshCommandId() {
 
 const _underage = ProfileApiException(
   ProfileApiFailure.underage,
-  'You must be at least 18 years old to use Slow Dating.',
+  'You must be at least 18 years old to use BlindInbox.',
 );
 
 const _invalidProfile = ProfileApiException(

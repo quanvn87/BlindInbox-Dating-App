@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slow_dating/core/auth/auth_session.dart';
-import 'package:slow_dating/core/auth/auth_session_store.dart';
-import 'package:slow_dating/features/auth/data/auth_api.dart';
-import 'package:slow_dating/features/auth/presentation/auth_controller.dart';
-import 'package:slow_dating/features/profile/data/profile_api.dart';
-import 'package:slow_dating/features/profile/domain/profile_models.dart';
+import 'package:blind_inbox/core/auth/auth_session.dart';
+import 'package:blind_inbox/core/auth/auth_session_store.dart';
+import 'package:blind_inbox/features/auth/data/auth_api.dart';
+import 'package:blind_inbox/features/auth/presentation/auth_controller.dart';
+import 'package:blind_inbox/features/profile/data/profile_api.dart';
+import 'package:blind_inbox/features/profile/domain/profile_models.dart';
 
 import 'support/fake_auth_api.dart';
 import '../profile/support/fake_profile_api.dart';

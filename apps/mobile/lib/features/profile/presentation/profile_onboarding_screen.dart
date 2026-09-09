@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:slow_dating/features/profile/domain/profile_models.dart';
-import 'package:slow_dating/features/profile/presentation/profile_controller.dart';
-import 'package:slow_dating/features/profile/presentation/widgets/catalog_multi_select.dart';
-import 'package:slow_dating/features/profile/presentation/widgets/location_selector.dart';
+import 'package:blind_inbox/features/profile/domain/profile_models.dart';
+import 'package:blind_inbox/features/profile/presentation/profile_controller.dart';
+import 'package:blind_inbox/features/profile/presentation/widgets/catalog_multi_select.dart';
+import 'package:blind_inbox/features/profile/presentation/widgets/location_selector.dart';
 
 final class ProfileOnboardingScreen extends ConsumerStatefulWidget {
   const ProfileOnboardingScreen({super.key});
@@ -100,7 +100,7 @@ final class _ProfileForm extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Slow Dating is for adults aged 18 and over. Your birth date confirms eligibility.',
+            'BlindInbox is for adults aged 18 and over. Your birth date confirms eligibility.',
           ),
           const SizedBox(height: 20),
           TextFormField(

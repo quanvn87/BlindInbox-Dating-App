@@ -413,7 +413,7 @@
   "info": {
     "contact": {},
     "description": "Authentication and profile API contract",
-    "title": "Slow Dating API",
+    "title": "BlindInbox API",
     "version": "1.0"
   },
   "openapi": "3.0.0",

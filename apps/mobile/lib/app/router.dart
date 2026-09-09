@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:slow_dating/core/auth/auth_session.dart';
-import 'package:slow_dating/features/auth/presentation/otp_screen.dart';
-import 'package:slow_dating/features/auth/presentation/phone_screen.dart';
-import 'package:slow_dating/features/profile/presentation/profile_onboarding_screen.dart';
+import 'package:blind_inbox/core/auth/auth_session.dart';
+import 'package:blind_inbox/features/auth/presentation/otp_screen.dart';
+import 'package:blind_inbox/features/auth/presentation/phone_screen.dart';
+import 'package:blind_inbox/features/profile/presentation/profile_onboarding_screen.dart';
 
 GoRouter createAppRouter(AuthSessionController session) {
   return GoRouter(

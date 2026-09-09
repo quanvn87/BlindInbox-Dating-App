@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slow_dating/core/auth/auth_session.dart';
+import 'package:blind_inbox/core/auth/auth_session.dart';
 
 void main() {
   test('extracts a stable non-persistent user identity from JWT sub', () {

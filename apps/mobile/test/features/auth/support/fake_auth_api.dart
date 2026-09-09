@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:slow_dating/core/auth/auth_session_store.dart';
-import 'package:slow_dating/features/auth/data/auth_api.dart';
+import 'package:blind_inbox/core/auth/auth_session_store.dart';
+import 'package:blind_inbox/features/auth/data/auth_api.dart';
 
 final class FakeAuthApi implements AuthApi {
   DateTime expiresAt = DateTime.utc(2030, 1, 1, 0, 1);

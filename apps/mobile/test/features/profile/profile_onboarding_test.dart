@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:slow_dating/app/router.dart';
-import 'package:slow_dating/core/auth/auth_session.dart';
-import 'package:slow_dating/features/profile/data/profile_api.dart';
-import 'package:slow_dating/features/profile/presentation/profile_controller.dart';
+import 'package:blind_inbox/app/router.dart';
+import 'package:blind_inbox/core/auth/auth_session.dart';
+import 'package:blind_inbox/features/profile/data/profile_api.dart';
+import 'package:blind_inbox/features/profile/presentation/profile_controller.dart';
 
 import 'support/fake_profile_api.dart';
 
@@ -20,7 +20,7 @@ void main() {
 
     expect(
       find.text(
-        'Slow Dating is for adults aged 18 and over. Your birth date confirms eligibility.',
+        'BlindInbox is for adults aged 18 and over. Your birth date confirms eligibility.',
       ),
       findsOneWidget,
     );

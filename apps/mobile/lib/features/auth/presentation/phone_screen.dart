@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:slow_dating/features/auth/presentation/auth_controller.dart';
+import 'package:blind_inbox/features/auth/presentation/auth_controller.dart';
 
 final class PhoneScreen extends ConsumerStatefulWidget {
   const PhoneScreen({super.key});

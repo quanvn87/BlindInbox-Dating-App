@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:slow_dating/core/api/api_client.dart';
+import 'package:blind_inbox/core/api/api_client.dart';
 
 abstract interface class AuthApi {
   Future<OtpChallenge> requestOtp({

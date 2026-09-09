@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 
 export const OPENAPI_OUTPUT_PATH = resolve(
   __dirname,
-  '../../../docs/openapi/slow-dating-v1.json',
+  '../../../docs/openapi/blindinbox-v1.json',
 );
 
 const DOCUMENT_ENVIRONMENT = {
@@ -32,7 +32,7 @@ export async function createOpenApiDocument(): Promise<OpenAPIObject> {
     app.setGlobalPrefix('v1');
 
     const config = new DocumentBuilder()
-      .setTitle('Slow Dating API')
+      .setTitle('BlindInbox API')
       .setDescription('Authentication and profile API contract')
       .setVersion('1.0')
       .addBearerAuth(

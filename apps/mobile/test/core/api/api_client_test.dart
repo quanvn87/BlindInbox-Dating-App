@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slow_dating/core/api/api_client.dart';
+import 'package:blind_inbox/core/api/api_client.dart';
 
 void main() {
   test('uses the Android emulator API URL by default', () {
